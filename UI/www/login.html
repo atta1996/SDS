@@ -1,0 +1,70 @@
+<!doctype html>
+<html>
+	<head>
+		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+		<title>Counter</title>
+		<link rel="shortcut icon" href="favicon.png">
+		<style>
+		/** { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
+		body { height: 100vh; display: flex; align-items: center; justify-content: center; background-color: #fff; font-family: 'Helvetika Neue', Arial, sans-serif; font-size: 12px; }
+		.counter-container { display: flex; flex-direction: column; align-items: center; }
+		.counter { text-transform: uppercase; color: rgb(0, 0, 0); font-weight: bold; font-size: 14; }
+		.btn-row { display: flex; align-items: center; margin: 1rem; }
+		.btn { cursor: pointer; min-width: 4em; padding: 1em; border-radius: 5px; text-align: center; margin: 0 1rem; box-shadow: 0 6px #8b5e00; color: white; background-color: #E4B702; position: relative; font-weight: bold; }
+		.btn:hover { box-shadow: 0 4px #8b5e00; top: 2px; }
+		.btn:active{ box-shadow: 0 1px #8b5e00; top: 5px; }*/
+		</style>
+	</head>
+	<body onload=start()>
+		<!-- UI layout -->
+		<div class="Login-container">
+			<div>
+                <h1>Login</h1>
+                <form>
+                    <div class="form-group">
+                      <label for="exampleInputEmail1">Correo electrónico</label>
+                      <input type="email" class="form-control" id="exampleInputEmail1" aria-describedby="emailHelp" placeholder="Introduce el correo electrónico">
+                      <small id="emailHelp" class="form-text text-muted">No compartiremos tu dirección de correo con nadie.</small>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 30px">
+                      <label for="exampleInputPassword1">Contraseña</label>
+                      <input type="password" class="form-control" id="exampleInputPassword1" placeholder="Contraseña">
+                    </div>
+                    <!--<div class="form-check">
+                      <input type="checkbox" class="form-check-input" id="exampleCheck1">
+                      <label class="form-check-label" for="exampleCheck1">Recuerdame</label>
+                    </div>-->
+                    <span></span>
+                    <a class="stretched-link" href="#">Crear cuenta</a>
+                    <button type="submit" class="btn btn-primary float-right">Siguiente</button>
+                  </form>
+            </div>
+        </div>
+
+				
+
+		<!-- Connect UI actions to Go functions 
+		<script>
+			const counter = document.querySelector('.counter');
+			const btnIncr = document.querySelector('.btn-incr');
+			const btnDecr = document.querySelector('.btn-decr');
+
+			// We use async/await because Go functions are asynchronous
+			const render = async () => {
+				counter.innerText = `Count: ${await window.counterValue()}`;
+			};
+
+			btnIncr.addEventListener('click', async () => {
+				await counterAdd(1); // Call Go function
+				render();
+			});
+
+			btnDecr.addEventListener('click', async () => {
+				await counterAdd(-1); // Call Go function
+				render();
+			});
+
+			render();
+		</script>-->
+	</body>
+</html>
