@@ -4,16 +4,7 @@
 		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
 		<title>Counter</title>
 		<link rel="shortcut icon" href="favicon.png">
-		<style>
-		/** { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
-		body { height: 100vh; display: flex; align-items: center; justify-content: center; background-color: #fff; font-family: 'Helvetika Neue', Arial, sans-serif; font-size: 12px; }
-		.counter-container { display: flex; flex-direction: column; align-items: center; }
-		.counter { text-transform: uppercase; color: rgb(0, 0, 0); font-weight: bold; font-size: 14; }
-		.btn-row { display: flex; align-items: center; margin: 1rem; }
-		.btn { cursor: pointer; min-width: 4em; padding: 1em; border-radius: 5px; text-align: center; margin: 0 1rem; box-shadow: 0 6px #8b5e00; color: white; background-color: #E4B702; position: relative; font-weight: bold; }
-		.btn:hover { box-shadow: 0 4px #8b5e00; top: 2px; }
-		.btn:active{ box-shadow: 0 1px #8b5e00; top: 5px; }*/
-		</style>
+		<meta charset="UTF-8">
 	</head>
 	<body onload=start()>
 		<!-- UI layout -->
@@ -35,36 +26,17 @@
                       <label class="form-check-label" for="exampleCheck1">Recuerdame</label>
                     </div>-->
                     <span></span>
-                    <a class="stretched-link" href="#">Crear cuenta</a>
+                    <a class="stretched-link" href="#" id="registro"  style="text-decoration:none;">Crear cuenta</a>
                     <button type="submit" class="btn btn-primary float-right">Siguiente</button>
                   </form>
             </div>
         </div>
-
-				
-
-		<!-- Connect UI actions to Go functions 
-		<script>
-			const counter = document.querySelector('.counter');
-			const btnIncr = document.querySelector('.btn-incr');
-			const btnDecr = document.querySelector('.btn-decr');
-
-			// We use async/await because Go functions are asynchronous
-			const render = async () => {
-				counter.innerText = `Count: ${await window.counterValue()}`;
-			};
-
-			btnIncr.addEventListener('click', async () => {
-				await counterAdd(1); // Call Go function
-				render();
-			});
-
-			btnDecr.addEventListener('click', async () => {
-				await counterAdd(-1); // Call Go function
-				render();
-			});
-
-			render();
-		</script>-->
 	</body>
+	<script>
+		const registro = document.getElementById('registro');
+
+		registro.addEventListener('click', async () => {
+			await redirect("registro"); // Call Go function
+		});
+	</script>
 </html>
