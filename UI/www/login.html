@@ -27,7 +27,7 @@
                     </div>-->
                     <span></span>
                     <a class="stretched-link" href="#" id="registro"  style="text-decoration:none;">Crear cuenta</a>
-                    <button type="submit" class="btn btn-primary float-right">Siguiente</button>
+                    <button type="submit" id="index" class="btn btn-primary float-right">Siguiente</button>
                   </form>
             </div>
         </div>
@@ -37,6 +37,12 @@
 
 		registro.addEventListener('click', async () => {
 			await redirect("registro"); // Call Go function
+		});
+
+    const index = document.getElementById('index');
+
+		index.addEventListener('click', async () => {
+			await redirect("index"); // Call Go function
 		});
 	</script>
 </html>

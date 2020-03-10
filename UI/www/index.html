@@ -1,9 +1,14 @@
 <!doctype html>
 <html>
 	<head>
+		<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
 		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
 		<title>Counter</title>
 		<link rel="shortcut icon" href="favicon.png">
+		<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.20/css/jquery.dataTables.css">
+  
+		<script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.10.20/js/jquery.dataTables.js"></script>
+		
 		<style>
 		/** { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
 		body { height: 100vh; display: flex; align-items: center; justify-content: center; background-color: #fff; font-family: 'Helvetika Neue', Arial, sans-serif; font-size: 12px; }
@@ -14,6 +19,11 @@
 		.btn:hover { box-shadow: 0 4px #8b5e00; top: 2px; }
 		.btn:active{ box-shadow: 0 1px #8b5e00; top: 5px; }*/
 		</style>
+		<script>
+			$(document).ready( function () {
+				$('#table_id').DataTable();
+			} );
+		</script>
 	</head>
 	<body onload=start()>
 		<!-- UI layout -->
@@ -96,21 +106,8 @@
 			const btnDecr = document.querySelector('.btn-decr');
 
 			// We use async/await because Go functions are asynchronous
-			const render = async () => {
-				counter.innerText = `Count: ${await window.counterValue()}`;
-			};
-
-			btnIncr.addEventListener('click', async () => {
-				await counterAdd(1); // Call Go function
-				render();
-			});
-
-			btnDecr.addEventListener('click', async () => {
-				await counterAdd(-1); // Call Go function
-				render();
-			});
-
-			render();
+			
+			
 		</script>
 	</body>
 </html>
