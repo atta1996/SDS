@@ -33,8 +33,15 @@
             </div>
             <div class="form-group">
                 <button class="btn btn-primary">Registrar</button>
-                <a class="stretched-link btn" href="#">Volver</a>
+                <a class="stretched-link btn" id="volver" href="#">Volver</a>
             </div>
         </form>
     </body>
+    <script>
+		const botonLogin = document.getElementById('volver');
+
+		botonLogin.addEventListener('click', async () => {
+			await redirect("login"); // Call Go function
+		});
+	</script>
 </html>
