@@ -1,10 +1,12 @@
-package Servidor
+package main
 
 import (
 	"bufio"
 	"fmt"
+	"log"
 	"net"
 	"os"
+	"path/filepath"
 )
 
 func server() {
@@ -24,13 +26,14 @@ func server() {
 
 			scanner := bufio.NewScanner(conn) // el scanner nos permite trabajar con la entrada línea a línea (por defecto)
 
-			scanner.Scan()
-			opcion := scanner.Text()
+			opcion := scanner.Text() //Leemos la opcion que quiere utilizar el usuario
 			switch opcion {
-			case "e":
+			case "e": //Para recibir archivos
 				recibirArchivo(scanner)
-			case "r":
+			case "r": //Para enviar archivos
 				recuperarArchivo(scanner)
+			case "d":
+				directorios(scanner)
 			}
 
 			conn.Close() // cerramos al finalizar el cliente (EOF se envía con ctrl+d o ctrl+z según el sistema)
@@ -50,13 +53,14 @@ func main() {
 	server()
 }
 
+//A traves del scanner se recibe el usuario, la ruta y el nombre del archivo y el archivo
 func recibirArchivo(scanner *bufio.Scanner) {
 	scanner.Scan()
 	usuario := scanner.Text()
 	scanner.Scan()
 	rutaYArchivo := scanner.Text()
 
-	fichero, _ := os.Open(usuario + "/" + rutaYArchivo)
+	fichero, _ := os.Open("/" + usuario + "/" + rutaYArchivo)
 
 	for scanner.Scan() { //Escribir la entrada de scanner en el fichero
 		fmt.Print(fichero, "%s", scanner.Text())
@@ -65,16 +69,62 @@ func recibirArchivo(scanner *bufio.Scanner) {
 
 }
 
+//A traves del scanner recibe el usuario, la ruta y el nombre del archivo y se transmite el archivo
 func recuperarArchivo(scanner *bufio.Scanner) {
 	scanner.Scan()
 	usuario := scanner.Text()
 	scanner.Scan()
 	rutaYArchivo := scanner.Text()
+	fichero, _ := os.Open("/" + usuario + "/" + rutaYArchivo)
 
-	fichero, _ := os.Open(usuario + "/" + rutaYArchivo)
+	fmt.Print(scanner, "%s", fichero)
 
-	for scanner.Scan() { //Escribir en el scanner el fichero
-		fmt.Print(scanner.Text(), "%s", fichero)
-	}
 	defer fichero.Close()
+}
+
+//Para utilizar con versiones de archivos
+func fileExists(filename string) bool {
+	info, err := os.Stat(filename)
+	if os.IsNotExist(err) {
+		return false
+	}
+	return !info.IsDir()
+}
+
+//Directorios
+func directorios(scanner *bufio.Scanner) {
+	scanner.Scan()
+	usuario := scanner.Text()
+
+	estructura := usuario
+	err := filepath.Walk(estructura,
+		func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+			estructura += path
+			return nil
+		})
+	if err != nil {
+		log.Println(err)
+	}
+	fmt.Print(scanner, "%s", estructura)
+}
+
+//Login
+func login(scanner *bufio.Scanner) {
+	scanner.Scan()
+	usuario := scanner.Text()
+	scanner.Scan()
+	pass := scanner.Text()
+	//Buscar la entrada en la base de datos
+}
+
+//Registro
+func registro(scanner *bufio.Scanner) {
+	scanner.Scan()
+	usuario := scanner.Text()
+	scanner.Scan()
+	pass := scanner.Text()
+	//Añadir la entrada en la base de datos
 }
