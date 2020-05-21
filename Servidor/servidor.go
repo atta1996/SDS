@@ -2,12 +2,21 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net"
 	"os"
 	"path/filepath"
 )
+
+type UsuPass struct {
+	User     string
+	Password string
+}
+
+const archivoPass = "passwords.json"
 
 func server() {
 	ln, err := net.Listen("tcp", "localhost:1337") // escucha en espera de conexión
@@ -34,6 +43,10 @@ func server() {
 				recuperarArchivo(scanner)
 			case "d":
 				directorios(scanner)
+			case "l":
+				login(scanner)
+			case "reg":
+				registro(scanner)
 			}
 
 			conn.Close() // cerramos al finalizar el cliente (EOF se envía con ctrl+d o ctrl+z según el sistema)
@@ -113,11 +126,12 @@ func directorios(scanner *bufio.Scanner) {
 
 //Login
 func login(scanner *bufio.Scanner) {
-	scanner.Scan()
-	usuario := scanner.Text()
-	scanner.Scan()
-	pass := scanner.Text()
-	//Buscar la entrada en la base de datos
+	/*	scanner.Scan()
+		usuario := scanner.Text()
+		scanner.Scan()
+		pass := scanner.Text()
+		//Buscar la entrada en la base de datos
+	*/
 }
 
 //Registro
@@ -127,4 +141,32 @@ func registro(scanner *bufio.Scanner) {
 	scanner.Scan()
 	pass := scanner.Text()
 	//Añadir la entrada en la base de datos
+
+	aGuardar := UsuPass{
+		User:     usuario,
+		Password: pass,
+	}
+
+	guardado, _ := json.MarshalIndent(aGuardar, "", "")
+	ioutil.WriteFile(archivoPass, guardado, 0644)
+}
+
+func registroPrueba(usuario string, pass string) {
+	//Añadir la entrada en la base de datos
+
+	aGuardar := UsuPass{
+		User:     usuario,
+		Password: pass,
+	}
+
+	fichero, _ := os.Open(archivoPass)
+	byteValue, _ := ioutil.ReadAll(fichero)
+
+	guardado, _ := json.MarshalIndent(aGuardar, "", " ")
+
+	guardado2 := append(byteValue, guardado...)
+
+	json.Unmarshal(byteValue, &guardado2)
+
+	_ = ioutil.WriteFile(archivoPass, guardado2, 0644)
 }
