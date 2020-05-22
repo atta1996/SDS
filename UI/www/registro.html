@@ -2,40 +2,35 @@
 <html>
     <head>
 		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
-		<title>Counter</title>
+		<title>Registro</title>
 		<link rel="shortcut icon" href="favicon.png">
-		<style>
-		/** { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
-		body { height: 100vh; display: flex; align-items: center; justify-content: center; background-color: #fff; font-family: 'Helvetika Neue', Arial, sans-serif; font-size: 12px; }
-		.counter-container { display: flex; flex-direction: column; align-items: center; }
-		.counter { text-transform: uppercase; color: rgb(0, 0, 0); font-weight: bold; font-size: 14; }
-		.btn-row { display: flex; align-items: center; margin: 1rem; }
-		.btn { cursor: pointer; min-width: 4em; padding: 1em; border-radius: 5px; text-align: center; margin: 0 1rem; box-shadow: 0 6px #8b5e00; color: white; background-color: #E4B702; position: relative; font-weight: bold; }
-		.btn:hover { box-shadow: 0 4px #8b5e00; top: 2px; }
-		.btn:active{ box-shadow: 0 1px #8b5e00; top: 5px; }*/
-        </style>
         <meta charset="UTF-8">
     </head>
     <body>
-        <h1>Registro</h1>
-        <form>
-            <div class="form-group">
-                <label for="registro_usuario">Usuario</label>
-                <input type="text" class="form-control" id="registro_usuario">
+        <div class="Login-container" style="margin-left: 15px; margin-right: 15px">
+			<div>
+                <h1>Registro</h1>
+                <form>
+                    <div class="form-group" style="margin-top: 30px;">
+                        <label for="registro_usuario">Usuario</label>
+                        <input type="text" class="form-control" id="registro_usuario" placeholder="Nombre de usuario">
+                    </div>
+                    <div class="form-group">
+                        <label for="registro_email">Email</label>
+                        <input type="email" class="form-control" id="registro_email" placeholder="Correo electrónico">
+                        <small id="emailHelp" class="form-text text-muted">No compartiremos tu dirección de correo con nadie.</small>
+
+                    </div>
+                    <div class="form-group" style="margin-bottom: 30px;">
+                        <label for="registro_password">Contraseña</label>
+                        <input type="password" class="form-control" id="registro_password" placeholder="Contraseña">
+                    </div>
+                    <span></span>
+                    <a class="stretched-link btn" href="#" id="volver"  style="text-decoration:none;">Volver</a>
+                    <button type="submit" onclick="singin()" id="login" class="btn btn-primary float-right">Registrar</button>
+                </form>
             </div>
-            <div class="form-group">
-                <label for="registro_email">Email</label>
-                <input type="text" class="form-control" id="registro_email">
-            </div>
-            <div class="form-group" style="margin-bottom: 30px;">
-                <label for="registro_password">Contraseña</label>
-                <input type="text" class="form-control" id="registro_password" >
-            </div>
-            <div class="form-group">
-                <button class="btn btn-primary">Registrar</button>
-                <a class="stretched-link btn" id="volver" href="#">Volver</a>
-            </div>
-        </form>
+        </div>
     </body>
     <script>
 		const botonLogin = document.getElementById('volver');
