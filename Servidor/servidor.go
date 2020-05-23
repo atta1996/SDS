@@ -2,57 +2,158 @@ package main
 
 import (
 	"bufio"
+	"bytes"
+	"crypto/rand"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net"
+	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
+
+	"golang.org/x/crypto/scrypt"
 )
+
+func decode64(s string) []byte {
+	b, err := base64.StdEncoding.DecodeString(s) // recupera el formato original
+	chk(err)                                     // comprobamos el error
+	return b                                     // devolvemos los datos originales
+}
 
 type UsuPass struct {
 	User     string
 	Password string
 }
 
+type resp struct {
+	Ok  bool   // true -> correcto, false -> error
+	Msg string // mensaje adicional
+}
+
+type user struct {
+	Name string            // nombre de usuario
+	Hash []byte            // hash de la contraseña
+	Salt []byte            // sal para la contraseña
+	Data map[string]string // datos adicionales del usuario
+}
+
+var gUsers map[string]user
+
 const archivoPass = "passwords.json"
+
+func response(w io.Writer, ok bool, msg string) {
+	r := resp{Ok: ok, Msg: msg}    // formateamos respuesta
+	rJSON, err := json.Marshal(&r) // codificamos en JSON
+	chk(err)                       // comprobamos error
+	w.Write(rJSON)                 // escribimos el JSON resultante
+}
+
+func responseFile(w http.ResponseWriter, file *os.File, filename string) {
+	FileHeader := make([]byte, 512)
+	file.Read(FileHeader)
+
+	FileContentType := http.DetectContentType(FileHeader)
+	FileStat, _ := file.Stat()
+	FileSize := strconv.FormatInt(FileStat.Size(), 10)
+
+	w.Header().Set("Content-Disposition", "attachment; filename="+filename)
+	w.Header().Set("Content-Type", FileContentType)
+	w.Header().Set("Content-Length", FileSize)
+
+	file.Seek(0, 0)
+	io.Copy(w, file)
+	return
+}
+
+func handler(w http.ResponseWriter, req *http.Request) {
+	req.ParseForm() // es necesario parsear el formulario
+
+	switch req.Form.Get("cmd") { // comprobamos comando desde el cliente
+	case "register": // ** registro
+		w.Header().Set("Content-Type", "text/plain")
+		u := user{}
+		u.Name = req.Form.Get("user")              // nombre
+		u.Salt = make([]byte, 16)                  // sal (16 bytes == 128 bits)
+		rand.Read(u.Salt)                          // la sal es aleatoria
+		u.Data = make(map[string]string)           // reservamos mapa de datos de usuario
+		u.Data["private"] = req.Form.Get("prikey") // clave privada
+		u.Data["public"] = req.Form.Get("pubkey")  // clave pública
+		password := decode64(req.Form.Get("pass")) // contraseña (keyLogin)
+
+		// "hasheamos" la contraseña con scrypt
+		u.Hash, _ = scrypt.Key(password, u.Salt, 16384, 8, 1, 32)
+
+		_, ok := gUsers[u.Name] // ¿existe ya el usuario?
+		if ok {
+			response(w, false, "Usuario ya registrado")
+		} else {
+			gUsers[u.Name] = u
+			response(w, true, "Usuario registrado")
+		}
+
+	case "login": // ** login
+		w.Header().Set("Content-Type", "text/plain")
+		u, ok := gUsers[req.Form.Get("user")] // ¿existe ya el usuario?
+		if !ok {
+			response(w, false, "Usuario inexistente")
+			return
+		}
+
+		password := decode64(req.Form.Get("pass"))               // obtenemos la contraseña
+		hash, _ := scrypt.Key(password, u.Salt, 16384, 8, 1, 32) // scrypt(contraseña)
+		if bytes.Compare(u.Hash, hash) != 0 {                    // comparamos
+			response(w, false, "Credenciales inválidas")
+			return
+		}
+		response(w, true, "Credenciales válidas")
+
+	case "enviar": // El cliente envia un archivo
+		w.Header().Set("Content-Type", "text/plain")
+		carpeta := req.Form.Get("carpeta")               // Se necesita la carpeta para almacenar archivos
+		file, fileheader, err := req.FormFile("archivo") // Leemos el archivo que nos envian
+		if err != nil {                                  // Comprobamos si hay errores en el archivo
+			response(w, false, "El archivo no ha llegado correctamente")
+			return
+		}
+		defer file.Close()
+
+		fileBytes, _ := ioutil.ReadAll(file)                                      // Leemos el contenido del archivo y lo amacenamos en filebytes
+		archivoGuardar, _ := os.Create("/" + carpeta + "/" + fileheader.Filename) // Abrimos un nuevo archivo en la carpeta designada por el cliente
+		archivoGuardar.Write(fileBytes)                                           //Escribimos el contenido del archivo enviado en nuestro archivo
+		defer archivoGuardar.Close()
+
+		response(w, true, "El archivo ha llegado correctamente")
+
+	case "recuperar": // El cliente recupera un archivo del servidor
+		filename := "/" + req.Form.Get("carpeta") + "/" + req.Form.Get("archivo")
+		archivoEnviar, err := os.Open(filename)
+		if err != nil {
+			response(w, false, "El archivo no existe o no esta en esta carpeta")
+			return
+		}
+		defer archivoEnviar.Close()
+		responseFile(w, archivoEnviar, filename)
+
+	default:
+		response(w, false, "Comando inválido")
+	}
+
+}
 
 func server() {
 	ln, err := net.Listen("tcp", "localhost:1337") // escucha en espera de conexión
 	chk(err)
 	defer ln.Close() // nos aseguramos que cerramos las conexiones aunque el programa falle
 
-	for { // búcle infinito, se sale con ctrl+c
-		conn, err := ln.Accept() // para cada nueva petición de conexión
-		chk(err)
-		go func() { // lanzamos un cierre (lambda, función anónima) en concurrencia
+	gUsers = make(map[string]user)
+	http.HandleFunc("/", handler)
 
-			_, port, err := net.SplitHostPort(conn.RemoteAddr().String()) // obtenemos el puerto remoto para identificar al cliente (decorativo)
-			chk(err)
-
-			fmt.Println("conexión: ", conn.LocalAddr(), " <--> ", conn.RemoteAddr())
-
-			scanner := bufio.NewScanner(conn) // el scanner nos permite trabajar con la entrada línea a línea (por defecto)
-
-			opcion := scanner.Text() //Leemos la opcion que quiere utilizar el usuario
-			switch opcion {
-			case "e": //Para recibir archivos
-				recibirArchivo(scanner)
-			case "r": //Para enviar archivos
-				recuperarArchivo(scanner)
-			case "d":
-				directorios(scanner)
-			case "l":
-				login(scanner)
-			case "reg":
-				registro(scanner)
-			}
-
-			conn.Close() // cerramos al finalizar el cliente (EOF se envía con ctrl+d o ctrl+z según el sistema)
-			fmt.Println("cierre[", port, "]")
-		}()
-	}
+	chk(http.ListenAndServeTLS(":10443", "cert.pem", "key.pem", nil))
 }
 
 func chk(e error) {
@@ -66,35 +167,6 @@ func main() {
 	server()
 }
 
-//A traves del scanner se recibe el usuario, la ruta y el nombre del archivo y el archivo
-func recibirArchivo(scanner *bufio.Scanner) {
-	scanner.Scan()
-	usuario := scanner.Text()
-	scanner.Scan()
-	rutaYArchivo := scanner.Text()
-
-	fichero, _ := os.Open("/" + usuario + "/" + rutaYArchivo)
-
-	for scanner.Scan() { //Escribir la entrada de scanner en el fichero
-		fmt.Print(fichero, "%s", scanner.Text())
-	}
-	defer fichero.Close()
-
-}
-
-//A traves del scanner recibe el usuario, la ruta y el nombre del archivo y se transmite el archivo
-func recuperarArchivo(scanner *bufio.Scanner) {
-	scanner.Scan()
-	usuario := scanner.Text()
-	scanner.Scan()
-	rutaYArchivo := scanner.Text()
-	fichero, _ := os.Open("/" + usuario + "/" + rutaYArchivo)
-
-	fmt.Print(scanner, "%s", fichero)
-
-	defer fichero.Close()
-}
-
 //Para utilizar con versiones de archivos
 func fileExists(filename string) bool {
 	info, err := os.Stat(filename)
@@ -105,7 +177,7 @@ func fileExists(filename string) bool {
 }
 
 //Directorios
-func directorios(scanner *bufio.Scanner) {
+func directorios(scanner *bufio.Scanner) { //Pendiente de implementar en el handler
 	scanner.Scan()
 	usuario := scanner.Text()
 
@@ -124,34 +196,7 @@ func directorios(scanner *bufio.Scanner) {
 	fmt.Print(scanner, "%s", estructura)
 }
 
-//Login
-func login(scanner *bufio.Scanner) {
-	/*	scanner.Scan()
-		usuario := scanner.Text()
-		scanner.Scan()
-		pass := scanner.Text()
-		//Buscar la entrada en la base de datos
-	*/
-}
-
-//Registro
-func registro(scanner *bufio.Scanner) {
-	scanner.Scan()
-	usuario := scanner.Text()
-	scanner.Scan()
-	pass := scanner.Text()
-	//Añadir la entrada en la base de datos
-
-	aGuardar := UsuPass{
-		User:     usuario,
-		Password: pass,
-	}
-
-	guardado, _ := json.MarshalIndent(aGuardar, "", "")
-	ioutil.WriteFile(archivoPass, guardado, 0644)
-}
-
-func registroPrueba(usuario string, pass string) {
+/*func registroPrueba(usuario string, pass string) {
 	//Añadir la entrada en la base de datos
 
 	aGuardar := UsuPass{
@@ -170,3 +215,4 @@ func registroPrueba(usuario string, pass string) {
 
 	_ = ioutil.WriteFile(archivoPass, guardado2, 0644)
 }
+*/
