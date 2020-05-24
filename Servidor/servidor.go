@@ -36,10 +36,11 @@ type resp struct {
 }
 
 type user struct {
-	Name string            // nombre de usuario
-	Hash []byte            // hash de la contraseña
-	Salt []byte            // sal para la contraseña
-	Data map[string]string // datos adicionales del usuario
+	Name  string            // nombre de usuario
+	Hash  []byte            // hash de la contraseña
+	Salt  []byte            // sal para la contraseña
+	Data  map[string]string // datos adicionales del usuario
+	Email string            //email del usuario
 }
 
 var gUsers map[string]user
@@ -84,12 +85,19 @@ func handler(w http.ResponseWriter, req *http.Request) {
 		u.Data["private"] = req.Form.Get("prikey") // clave privada
 		u.Data["public"] = req.Form.Get("pubkey")  // clave pública
 		password := decode64(req.Form.Get("pass")) // contraseña (keyLogin)
+		u.Email = req.Form.Get("email")
 
 		// "hasheamos" la contraseña con scrypt
 		u.Hash, _ = scrypt.Key(password, u.Salt, 16384, 8, 1, 32)
 
 		_, ok := gUsers[u.Name] // ¿existe ya el usuario?
-		if ok {
+		ok2 := false
+		for _, buscaEmail := range gUsers {
+			if buscaEmail.Email == u.Email {
+				ok2 = true
+			}
+		}
+		if ok || ok2 {
 			response(w, false, "Usuario ya registrado")
 		} else {
 			gUsers[u.Name] = u
@@ -114,6 +122,7 @@ func handler(w http.ResponseWriter, req *http.Request) {
 
 	case "enviar": // El cliente envia un archivo
 		w.Header().Set("Content-Type", "text/plain")
+		usuario := req.Form.Get("user")
 		carpeta := req.Form.Get("carpeta")               // Se necesita la carpeta para almacenar archivos
 		file, fileheader, err := req.FormFile("archivo") // Leemos el archivo que nos envian
 		if err != nil {                                  // Comprobamos si hay errores en el archivo
@@ -122,15 +131,15 @@ func handler(w http.ResponseWriter, req *http.Request) {
 		}
 		defer file.Close()
 
-		fileBytes, _ := ioutil.ReadAll(file)                                      // Leemos el contenido del archivo y lo amacenamos en filebytes
-		archivoGuardar, _ := os.Create("/" + carpeta + "/" + fileheader.Filename) // Abrimos un nuevo archivo en la carpeta designada por el cliente
-		archivoGuardar.Write(fileBytes)                                           //Escribimos el contenido del archivo enviado en nuestro archivo
+		fileBytes, _ := ioutil.ReadAll(file)                                                      // Leemos el contenido del archivo y lo amacenamos en filebytes
+		archivoGuardar, _ := os.Create("/" + usuario + "/" + carpeta + "/" + fileheader.Filename) // Abrimos un nuevo archivo en la carpeta designada por el cliente
+		archivoGuardar.Write(fileBytes)                                                           //Escribimos el contenido del archivo enviado en nuestro archivo
 		defer archivoGuardar.Close()
 
 		response(w, true, "El archivo ha llegado correctamente")
 
 	case "recuperar": // El cliente recupera un archivo del servidor
-		filename := "/" + req.Form.Get("carpeta") + "/" + req.Form.Get("archivo")
+		filename := "/" + req.Form.Get("user") + "/" + req.Form.Get("carpeta") + "/" + req.Form.Get("archivo")
 		archivoEnviar, err := os.Open(filename)
 		if err != nil {
 			response(w, false, "El archivo no existe o no esta en esta carpeta")
