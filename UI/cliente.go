@@ -86,7 +86,7 @@ func client() {
 		log.Println(pass)*/
 
 		data := url.Values{}                 //Declaramos la estructura que contendrá los valores
-		data.Set("cmd", "l")                 // comando (string)
+		data.Set("cmd", "login")             // comando (string)
 		data.Set("email", email.String())    // email (string)
 		data.Set("pass", encode64(keyLogin)) // contraseña (a base64 porque es []byte)
 
@@ -94,11 +94,12 @@ func client() {
 		chk(err)
 
 		/* prints de testeo
-		io.Copy(os.Stdout, r.Body) 			 // mostramos el cuerpo de la respuesta (es un reader)
+		io.Copy(os.Stdout, r.Body) // mostramos el cuerpo de la respuesta (es un reader)
 		fmt.Println()*/
 
 		var body []byte
 		body, err = ioutil.ReadAll(r.Body) //Leemos el contenido de la respuesta
+		defer r.Body.Close()
 
 		var str respserv
 		_ = json.Unmarshal(body, &str) //Asignamos el contenido de la respuesta a la variable str
@@ -109,7 +110,7 @@ func client() {
 	})
 
 	//Enlazamos la función login a la UI
-	ui.Bind("singin", func() {
+	ui.Bind("registro", func() {
 		//Leemos el email y la contraseña del formulario de login
 		user := ui.Eval(`document.getElementById('registro_usuario').value`)
 		email := ui.Eval(`document.getElementById('registro_email').value`)
@@ -120,12 +121,8 @@ func client() {
 		keyLogin := keyClient[:32] // una mitad para el login (256 bits)
 		//keyData := keyClient[32:64] // la otra para los datos (256 bits)
 
-		log.Println(user)
-		log.Println(email)
-		log.Println(pass)
-
 		data := url.Values{}                 //Declaramos la estructura que contendrá los valores
-		data.Set("cmd", "reg")               // comando (string)
+		data.Set("cmd", "register")          // comando (string)
 		data.Set("user", user.String())      // usuario (string)
 		data.Set("email", email.String())    // email (string)
 		data.Set("pass", encode64(keyLogin)) // contraseña (a base64 porque es []byte)
@@ -134,11 +131,12 @@ func client() {
 		chk(err)
 
 		/* prints de testeo
-		io.Copy(os.Stdout, r.Body) 			 // mostramos el cuerpo de la respuesta (es un reader)
+		io.Copy(os.Stdout, r.Body) // mostramos el cuerpo de la respuesta (es un reader)
 		fmt.Println()*/
 
 		var body []byte
 		body, err = ioutil.ReadAll(r.Body) //Leemos el contenido de la respuesta
+		defer r.Body.Close()
 
 		var str respserv
 		_ = json.Unmarshal(body, &str) //Asignamos el contenido de la respuesta a la variable str
@@ -171,56 +169,4 @@ func client() {
 	case <-ui.Done():
 	}
 
-	/* creamos un cliente especial que no comprueba la validez de los certificados
-	esto es necesario por que usamos certificados autofirmados (para pruebas) */
-	/*tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}
-
-	client := &http.Client{Transport: tr}
-
-	// hash con SHA512 de la contraseña
-	keyClient := sha512.Sum512([]byte("contraseña del cliente"))
-	keyLogin := keyClient[:32]  // una mitad para el login (256 bits)
-	keyData := keyClient[32:64] // la otra para los datos (256 bits)
-
-	// generamos un par de claves (privada, pública) para el servidor
-	pkClient, err := rsa.GenerateKey(rand.Reader, 1024)
-	chk(err)
-	pkClient.Precompute() // aceleramos su uso con un precálculo
-
-	pkJSON, err := json.Marshal(&pkClient) // codificamos con JSON
-	chk(err)
-
-	keyPub := pkClient.Public()           // extraemos la clave pública por separado
-	pubJSON, err := json.Marshal(&keyPub) // y codificamos con JSON
-
-	// ** ejemplo de registro
-	data := url.Values{}                 // estructura para contener los valores
-	data.Set("cmd", "register")          // comando (string)
-	data.Set("user", "usuario")          // usuario (string)
-	data.Set("pass", encode64(keyLogin)) // "contraseña" a base64
-
-	// comprimimos y codificamos la clave pública
-	data.Set("pubkey", encode64(compress(pubJSON)))
-
-	// comprimimos, ciframos y codificamos la clave privada
-	data.Set("prikey", encode64(encrypt(compress(pkJSON), keyData)))
-
-	r, err := client.PostForm("https://localhost:10443", data) // enviamos por POST
-	chk(err)
-	io.Copy(os.Stdout, r.Body) // mostramos el cuerpo de la respuesta (es un reader)
-	fmt.Println()
-
-	// ** ejemplo de login
-	data = url.Values{}
-	data.Set("cmd", "login")             // comando (string)
-	data.Set("user", "usuario")          // usuario (string)
-	data.Set("pass", encode64(keyLogin)) // contraseña (a base64 porque es []byte)
-	r, err = client.PostForm("https://localhost:10443", data)
-	chk(err)
-	io.Copy(os.Stdout, r.Body) // mostramos el cuerpo de la respuesta (es un reader)
-	fmt.Println()*/
 }
-
-//test
