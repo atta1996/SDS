@@ -148,6 +148,22 @@ func handler(w http.ResponseWriter, req *http.Request) {
 		defer archivoEnviar.Close()
 		responseFile(w, archivoEnviar, filename)
 
+	case "directorios":
+		usuario := req.Form.Get("user")
+		estructura := usuario
+		err := filepath.Walk(estructura,
+			func(path string, info os.FileInfo, err error) error {
+				if err != nil {
+					return err
+				}
+				estructura += path
+				return nil
+			})
+		if err != nil {
+			response(w, false, "El usuario no tiene ningun directorio")
+		}
+		response(w, true, estructura)
+
 	default:
 		response(w, false, "Comando inválido")
 	}
