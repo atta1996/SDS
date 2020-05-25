@@ -107,7 +107,14 @@ func handler(w http.ResponseWriter, req *http.Request) {
 	case "login": // ** login
 		w.Header().Set("Content-Type", "text/plain")
 		u, ok := gUsers[req.Form.Get("user")] // ¿existe ya el usuario?
-		if !ok {
+		ok2 := false
+		for _, buscaEmail := range gUsers {
+			if buscaEmail.Email == req.Form.Get("email") {
+				ok2 = true
+				u = buscaEmail
+			}
+		}
+		if !ok && !ok2 {
 			response(w, false, "Usuario inexistente")
 			return
 		}
@@ -118,7 +125,7 @@ func handler(w http.ResponseWriter, req *http.Request) {
 			response(w, false, "Credenciales inválidas")
 			return
 		}
-		response(w, true, "Credenciales válidas")
+		response(w, true, u.Name)
 
 	case "enviar": // El cliente envia un archivo
 		w.Header().Set("Content-Type", "text/plain")
