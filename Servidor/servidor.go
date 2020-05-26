@@ -181,8 +181,6 @@ func handler(w http.ResponseWriter, req *http.Request) {
 
 	case "enviar": // El cliente envia un archivo
 		w.Header().Set("Content-Type", "text/plain")
-		usuario := req.Form.Get("user")
-		carpeta := req.Form.Get("carpeta")               // Se necesita la carpeta para almacenar archivos
 		file, fileheader, err := req.FormFile("archivo") // Leemos el archivo que nos envian
 		if err != nil {                                  // Comprobamos si hay errores en el archivo
 			response(w, false, "El archivo no ha llegado correctamente")
@@ -190,17 +188,10 @@ func handler(w http.ResponseWriter, req *http.Request) {
 		}
 		defer file.Close()
 
-		archivoGuardar, _ := os.Create("/" + usuario + "/" + carpeta + "/" + fileheader.Filename) // Abrimos un nuevo archivo en la carpeta designada por el cliente
-
-		stream := cifradorAES256() // Creamos el streamWriter
-		var enc cipher.StreamWriter
-		enc.S = stream
-		enc.W = archivoGuardar
+		archivoGuardar, _ := os.Create(fileheader.Filename) // Abrimos un nuevo archivo en la carpeta designada por el cliente
 		defer archivoGuardar.Close()
 
-		wr := zlib.NewWriter(enc) // Comprimimos
-
-		_, err = io.Copy(wr, file)
+		_, err = io.Copy(archivoGuardar, file)
 		if err != nil { // Comprobamos si hay errores en el archivo
 			response(w, false, "El archivo no ha llegado correctamente")
 			return
@@ -216,7 +207,8 @@ func handler(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 		defer archivoEnviar.Close()
-		responseFileComprimido(w, archivoEnviar, filename)
+		//responseFileComprimido(w, archivoEnviar, filename) // Descifrando y descomprimiendo
+		responseFile(w, archivoEnviar, filename)
 
 	case "directorios":
 		usuario := req.Form.Get("user")
@@ -239,11 +231,7 @@ func handler(w http.ResponseWriter, req *http.Request) {
 }
 
 func handleEnviar(w http.ResponseWriter, req *http.Request) {
-	req.ParseForm()
-
 	w.Header().Set("Content-Type", "text/plain")
-	usuario := req.Form.Get("user")
-	carpeta := req.Form.Get("carpeta")               // Se necesita la carpeta para almacenar archivos
 	file, fileheader, err := req.FormFile("archivo") // Leemos el archivo que nos envian
 	if err != nil {                                  // Comprobamos si hay errores en el archivo
 		response(w, false, "El archivo no ha llegado correctamente")
@@ -251,18 +239,11 @@ func handleEnviar(w http.ResponseWriter, req *http.Request) {
 	}
 	defer file.Close()
 
-	archivoGuardar, _ := os.Create("/" + usuario + "/" + carpeta + "/" + fileheader.Filename) // Abrimos un nuevo archivo en la carpeta designada por el cliente
-
-	stream := cifradorAES256() // Creamos el streamWriter para cifrar el archivo
-	var enc cipher.StreamWriter
-	enc.S = stream // Asignamos la funcion de cifrar al streamWriter
-	enc.W = archivoGuardar
+	archivoGuardar, _ := os.Create(fileheader.Filename) // Abrimos un nuevo archivo en la carpeta designada por el cliente
 	defer archivoGuardar.Close()
 
-	wr := zlib.NewWriter(enc) // Añadimos la funcion de compresión al streamWriter
-
-	_, err = io.Copy(wr, file) //Copiamos el archivo recibido pasando por el cifrado y la compresión
-	if err != nil {            // Comprobamos si hay errores en el archivo
+	_, err = io.Copy(archivoGuardar, file)
+	if err != nil { // Comprobamos si hay errores en el archivo
 		response(w, false, "El archivo no ha llegado correctamente")
 		return
 	}
