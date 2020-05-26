@@ -154,6 +154,7 @@ func handler(w http.ResponseWriter, req *http.Request) {
 		} else {
 			gUsers[u.Name] = u
 			response(w, true, "Usuario registrado")
+			guardarUsuarios()
 		}
 
 	case "login": // ** login
@@ -231,6 +232,7 @@ func handler(w http.ResponseWriter, req *http.Request) {
 }
 
 func handleEnviar(w http.ResponseWriter, req *http.Request) {
+	req.ParseForm()
 	w.Header().Set("Content-Type", "text/plain")
 	file, fileheader, err := req.FormFile("archivo") // Leemos el archivo que nos envian
 	if err != nil {                                  // Comprobamos si hay errores en el archivo
@@ -257,6 +259,7 @@ func server() {
 	defer ln.Close() // nos aseguramos que cerramos las conexiones aunque el programa falle
 
 	gUsers = make(map[string]user)
+	cargarUsuarios()
 	http.HandleFunc("/", handler)
 	http.HandleFunc("/enviar", handleEnviar)
 
@@ -323,3 +326,14 @@ func directorios(scanner *bufio.Scanner) { //Pendiente de implementar en el hand
 	_ = ioutil.WriteFile(archivoPass, guardado2, 0644)
 }
 */
+
+func guardarUsuarios() {
+	usuarios, _ := json.Marshal(gUsers)
+	ioutil.WriteFile("usuarios.conf", usuarios, 0644)
+}
+
+func cargarUsuarios() {
+	usuarios, _ := ioutil.ReadFile("usuarios.conf")
+
+	json.Unmarshal(usuarios, &gUsers)
+}
