@@ -3,12 +3,15 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"compress/zlib"
+	"crypto/aes"
+	"crypto/cipher"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
@@ -69,6 +72,53 @@ func responseFile(w http.ResponseWriter, file *os.File, filename string) {
 	file.Seek(0, 0)
 	io.Copy(w, file)
 	return
+}
+
+func responseFileComprimido(w http.ResponseWriter, file *os.File, filename string) {
+	FileHeader := make([]byte, 512)
+	file.Read(FileHeader)
+
+	stream := cifradorAES256()
+	var dec cipher.StreamReader
+	dec.S = stream
+	dec.R = file
+
+	rd, err := zlib.NewReader(dec)
+	if err != nil { // Comprobamos si hay errores en el archivo
+		response(w, false, "Ha habido un error leyendo el archivo")
+		return
+	}
+
+	FileContentType := http.DetectContentType(FileHeader)
+	FileStat, _ := file.Stat()
+	FileSize := strconv.FormatInt(FileStat.Size(), 10)
+
+	w.Header().Set("Content-Disposition", "attachment; filename="+filename)
+	w.Header().Set("Content-Type", FileContentType)
+	w.Header().Set("Content-Length", FileSize)
+
+	file.Seek(0, 0)
+	io.Copy(w, rd)
+	return
+}
+
+func cifradorAES256() cipher.Stream {
+	h := sha256.New()
+	h.Reset()
+	_, err := h.Write([]byte("SDS2020"))
+	chk(err)
+	key := h.Sum(nil)
+
+	h.Reset()
+	_, err = h.Write([]byte("<inicializar>"))
+	chk(err)
+	iv := h.Sum(nil)
+
+	block, err := aes.NewCipher(key)
+	chk(err)
+	S := cipher.NewCTR(block, iv[:16])
+
+	return S
 }
 
 func handler(w http.ResponseWriter, req *http.Request) {
@@ -138,10 +188,21 @@ func handler(w http.ResponseWriter, req *http.Request) {
 		}
 		defer file.Close()
 
-		fileBytes, _ := ioutil.ReadAll(file)                                                      // Leemos el contenido del archivo y lo amacenamos en filebytes
 		archivoGuardar, _ := os.Create("/" + usuario + "/" + carpeta + "/" + fileheader.Filename) // Abrimos un nuevo archivo en la carpeta designada por el cliente
-		archivoGuardar.Write(fileBytes)                                                           //Escribimos el contenido del archivo enviado en nuestro archivo
+
+		stream := cifradorAES256() // Creamos el streamWriter
+		var enc cipher.StreamWriter
+		enc.S = stream
+		enc.W = archivoGuardar
 		defer archivoGuardar.Close()
+
+		wr := zlib.NewWriter(enc) // Comprimimos
+
+		_, err = io.Copy(wr, file)
+		if err != nil { // Comprobamos si hay errores en el archivo
+			response(w, false, "El archivo no ha llegado correctamente")
+			return
+		}
 
 		response(w, true, "El archivo ha llegado correctamente")
 
@@ -153,7 +214,7 @@ func handler(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 		defer archivoEnviar.Close()
-		responseFile(w, archivoEnviar, filename)
+		responseFileComprimido(w, archivoEnviar, filename)
 
 	case "directorios":
 		usuario := req.Form.Get("user")
