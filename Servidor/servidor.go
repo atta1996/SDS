@@ -238,6 +238,38 @@ func handler(w http.ResponseWriter, req *http.Request) {
 
 }
 
+func handleEnviar(w http.ResponseWriter, req *http.Request) {
+	req.ParseForm()
+
+	w.Header().Set("Content-Type", "text/plain")
+	usuario := req.Form.Get("user")
+	carpeta := req.Form.Get("carpeta")               // Se necesita la carpeta para almacenar archivos
+	file, fileheader, err := req.FormFile("archivo") // Leemos el archivo que nos envian
+	if err != nil {                                  // Comprobamos si hay errores en el archivo
+		response(w, false, "El archivo no ha llegado correctamente")
+		return
+	}
+	defer file.Close()
+
+	archivoGuardar, _ := os.Create("/" + usuario + "/" + carpeta + "/" + fileheader.Filename) // Abrimos un nuevo archivo en la carpeta designada por el cliente
+
+	stream := cifradorAES256() // Creamos el streamWriter para cifrar el archivo
+	var enc cipher.StreamWriter
+	enc.S = stream // Asignamos la funcion de cifrar al streamWriter
+	enc.W = archivoGuardar
+	defer archivoGuardar.Close()
+
+	wr := zlib.NewWriter(enc) // Añadimos la funcion de compresión al streamWriter
+
+	_, err = io.Copy(wr, file) //Copiamos el archivo recibido pasando por el cifrado y la compresión
+	if err != nil {            // Comprobamos si hay errores en el archivo
+		response(w, false, "El archivo no ha llegado correctamente")
+		return
+	}
+
+	response(w, true, "El archivo ha llegado correctamente")
+}
+
 func server() {
 	ln, err := net.Listen("tcp", "localhost:1337") // escucha en espera de conexión
 	chk(err)
@@ -245,6 +277,7 @@ func server() {
 
 	gUsers = make(map[string]user)
 	http.HandleFunc("/", handler)
+	http.HandleFunc("/enviar", handleEnviar)
 
 	chk(http.ListenAndServeTLS(":10443", "cert.pem", "key.pem", nil))
 }
