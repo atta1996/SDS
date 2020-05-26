@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"bytes"
 	"compress/zlib"
 	"crypto/aes"
@@ -13,11 +12,9 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"net"
 	"net/http"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -285,47 +282,6 @@ func fileExists(filename string) bool {
 	}
 	return !info.IsDir()
 }
-
-//Directorios
-func directorios(scanner *bufio.Scanner) { //Pendiente de implementar en el handler
-	scanner.Scan()
-	usuario := scanner.Text()
-
-	estructura := usuario
-	err := filepath.Walk(estructura,
-		func(path string, info os.FileInfo, err error) error {
-			if err != nil {
-				return err
-			}
-			estructura += path
-			return nil
-		})
-	if err != nil {
-		log.Println(err)
-	}
-	fmt.Print(scanner, "%s", estructura)
-}
-
-/*func registroPrueba(usuario string, pass string) {
-	//Añadir la entrada en la base de datos
-
-	aGuardar := UsuPass{
-		User:     usuario,
-		Password: pass,
-	}
-
-	fichero, _ := os.Open(archivoPass)
-	byteValue, _ := ioutil.ReadAll(fichero)
-
-	guardado, _ := json.MarshalIndent(aGuardar, "", " ")
-
-	guardado2 := append(byteValue, guardado...)
-
-	json.Unmarshal(byteValue, &guardado2)
-
-	_ = ioutil.WriteFile(archivoPass, guardado2, 0644)
-}
-*/
 
 func guardarUsuarios() {
 	usuarios, _ := json.Marshal(gUsers)
