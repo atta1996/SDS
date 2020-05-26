@@ -12,12 +12,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"golang.org/x/crypto/scrypt"
 )
@@ -218,17 +220,15 @@ func handler(w http.ResponseWriter, req *http.Request) {
 
 	case "directorios":
 		usuario := req.Form.Get("user")
-		estructura := usuario
-		err := filepath.Walk(estructura,
-			func(path string, info os.FileInfo, err error) error {
-				if err != nil {
-					return err
-				}
-				estructura += path
-				return nil
-			})
+		estructura := ""
+		files, err := ioutil.ReadDir(".")
 		if err != nil {
 			response(w, false, "El usuario no tiene ningun directorio")
+		}
+		for _, f := range files {
+			if strings.Contains(f.Name(), usuario) {
+				estructura += f.Name()
+			}
 		}
 		response(w, true, estructura)
 
