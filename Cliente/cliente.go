@@ -506,7 +506,7 @@ func realizarBackup(rutaarchivo string) {
 
 	dir := filepath.Base(rutaarchivo)
 
-	ficherozip := loggeduser + "-" + dir + "-" + time.Now().Format("2006-1-02-15-04-05") + ".zip"
+	ficherozip := dir + "-" + time.Now().Format("2006-1-02-15-04-05") + ".zip"
 
 	outFile, err := os.Create(ficherozip)
 
