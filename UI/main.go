@@ -19,9 +19,6 @@ func main() {
 
 	if len(os.Args) > 1 {
 		switch os.Args[1] {
-		case "srv":
-			fmt.Println("Entrando en modo servidor...")
-			server()
 		case "cli":
 			fmt.Println("Entrando en modo cliente...")
 			client()
