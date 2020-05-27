@@ -2,12 +2,19 @@ package main
 
 import (
 	"archive/zip"
+	"bytes"
+	"compress/zlib"
+	"crypto/aes"
+	"crypto/cipher"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/sha256"
 	"crypto/sha512"
 	"crypto/tls"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -54,7 +61,53 @@ func (c *counter) Redirect(archivo string) {
 	c.ui.Load("data:text/html," + url.PathEscape(html))
 }
 
+// función para comprobar errores (ahorra escritura)
+func chk(e error) {
+	if e != nil {
+		panic(e)
+	}
+}
+
+// función para codificar de []bytes a string (Base64)
+func encode64(data []byte) string {
+	return base64.StdEncoding.EncodeToString(data) // sólo utiliza caracteres "imprimibles"
+}
+
+// función para cifrar (con AES en este caso), adjunta el IV al principio
+func encrypt(data, key []byte) (out []byte) {
+	out = make([]byte, len(data)+16)    // reservamos espacio para el IV al principio
+	rand.Read(out[:16])                 // generamos el IV
+	blk, err := aes.NewCipher(key)      // cifrador en bloque (AES), usa key
+	chk(err)                            // comprobamos el error
+	ctr := cipher.NewCTR(blk, out[:16]) // cifrador en flujo: modo CTR, usa IV
+	ctr.XORKeyStream(out[16:], data)    // ciframos los datos
+	return
+}
+
+// función para comprimir
+func compress(data []byte) []byte {
+	var b bytes.Buffer      // b contendrá los datos comprimidos (tamaño variable)
+	w := zlib.NewWriter(&b) // escritor que comprime sobre b
+	w.Write(data)           // escribimos los datos
+	w.Close()               // cerramos el escritor (buffering)
+	return b.Bytes()        // devolvemos los datos comprimidos
+}
+
+// función para descomprimir
+func decompress(data []byte) []byte {
+	var b bytes.Buffer // b contendrá los datos descomprimidos
+
+	r, err := zlib.NewReader(bytes.NewReader(data)) // lector descomprime al leer
+
+	chk(err)         // comprobamos el error
+	io.Copy(&b, r)   // copiamos del descompresor (r) al buffer (b)
+	r.Close()        // cerramos el lector (buffering)
+	return b.Bytes() // devolvemos los datos descomprimidos
+}
+
 func client() {
+
+	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
@@ -96,7 +149,7 @@ func client() {
 		keyLogin := keyClient[:32] // una mitad para el login (256 bits)
 
 		/*prints de testeo
-		log.Println(email)
+		log.Println(user)
 		log.Println(pass)*/
 
 		data := url.Values{}                 //Declaramos la estructura que contendrá los valores
@@ -120,6 +173,7 @@ func client() {
 
 		if str.Ok { // Si el usuario y contraseña son correctos redirigimos a index.html
 			loggeduser = str.Msg //user.String()
+
 			c.Redirect("index")
 		}
 	})
@@ -184,11 +238,6 @@ func client() {
 		//Leemos el email y la contraseña del formulario de login
 		rutaarchivo := ui.Eval(`document.getElementById('filePath').value`)
 
-		/*prints de testeo
-		log.Println(filepath)
-		log.Println(filepath.String())*/
-
-		//_, dor := filepath.Split(rutaarchivo.String())
 		dir := filepath.Base(rutaarchivo.String())
 
 		ficherozip := loggeduser + "-" + dir + "-" + time.Now().Format("2006-1-02-15-04-05") + ".zip"
@@ -198,10 +247,10 @@ func client() {
 		if err != nil {
 			fmt.Println(err)
 		}
-		//defer outFile.Close()
 
 		// Create a new zip archive.
 		w := zip.NewWriter(outFile)
+		defer w.Close()
 
 		// Add some files to the archive.
 		addFiles(w, rutaarchivo.String(), "")
@@ -216,7 +265,14 @@ func client() {
 			fmt.Println(err)
 		}
 
-		r, err := http.NewRequest("POST", "https://localhost:10443/enviar", outFile)
+		f, _ := os.Open(ficherozip)
+		req, err := http.NewRequest("POST", "https://localhost:10443/enviar", f)
+		req.Header.Add("usuario", loggeduser)
+		req.Header.Add("filename", ficherozip)
+		chk(err)
+
+		client := &http.Client{}
+		r, err := client.Do(req)
 		chk(err)
 
 		outFile.Close()
@@ -226,21 +282,14 @@ func client() {
 		body, err = ioutil.ReadAll(r.Body) //Leemos el contenido de la respuesta
 		defer r.Body.Close()
 
+		io.Copy(os.Stdout, r.Body) // mostramos el cuerpo de la respuesta (es un reader)
+		fmt.Println()
 		var str respserv
 		_ = json.Unmarshal(body, &str) //Asignamos el contenido de la respuesta a la variable str
 
 		if str.Ok { // Si el usuario y contraseña son correctos redirigimos a index.html
 			c.Redirect("index")
 		}
-
-		/*resp, err := client.Do(r)
-		if err != nil {
-			log.Fatal(err)
-		}
-		content, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			log.Fatal(err)
-		}*/
 
 	})
 
@@ -317,10 +366,29 @@ func addFiles(w *zip.Writer, rutaarchivo, baseInZip string) {
 
 			// Recurse
 			newBase := rutaarchivo + file.Name() + "/"
-			log.Println("Recursing and Adding SubDir: " + file.Name())
-			log.Println("Recursing and Adding SubDir: " + newBase)
+			//log.Println("Recursing and Adding SubDir: " + file.Name())
+			//log.Println("Recursing and Adding SubDir: " + newBase)
 
 			addFiles(w, newBase, baseInZip+file.Name()+"/")
 		}
 	}
+}
+
+func cifradorAES256() cipher.Stream {
+	h := sha256.New()
+	h.Reset()
+	_, err := h.Write([]byte("SDS2020"))
+	chk(err)
+	key := h.Sum(nil)
+
+	h.Reset()
+	_, err = h.Write([]byte("<inicializar>"))
+	chk(err)
+	iv := h.Sum(nil)
+
+	block, err := aes.NewCipher(key)
+	chk(err)
+	S := cipher.NewCTR(block, iv[:16])
+
+	return S
 }
