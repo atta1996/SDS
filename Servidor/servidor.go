@@ -16,7 +16,6 @@ import (
 	"net/http"
 	"os"
 	"strconv"
-	"strings"
 
 	"golang.org/x/crypto/scrypt"
 )
@@ -152,6 +151,7 @@ func handler(w http.ResponseWriter, req *http.Request) {
 			gUsers[u.Name] = u
 			response(w, true, "Usuario registrado")
 			guardarUsuarios()
+			os.Mkdir(u.Name, 0777)
 		}
 
 	case "login": // ** login
@@ -211,14 +211,12 @@ func handler(w http.ResponseWriter, req *http.Request) {
 	case "directorios":
 		usuario := req.Form.Get("user")
 		estructura := ""
-		files, err := ioutil.ReadDir(".")
+		files, err := ioutil.ReadDir(usuario)
 		if err != nil {
 			response(w, false, "El usuario no tiene ningun directorio")
 		}
 		for _, f := range files {
-			if strings.Contains(f.Name(), usuario) {
-				estructura += f.Name()
-			}
+			estructura += f.Name()
 		}
 		response(w, true, estructura)
 
@@ -230,18 +228,16 @@ func handler(w http.ResponseWriter, req *http.Request) {
 
 func handleEnviar(w http.ResponseWriter, req *http.Request) {
 	req.ParseForm()
+	req.ParseMultipartForm(10 << 21)
 	w.Header().Set("Content-Type", "text/plain")
-	file, fileheader, err := req.FormFile("archivo") // Leemos el archivo que nos envian
-	if err != nil {                                  // Comprobamos si hay errores en el archivo
-		response(w, false, "El archivo no ha llegado correctamente")
-		return
-	}
-	defer file.Close()
+	carpeta := req.Header.Get("usuario")
+	filename := req.Header.Get("filename")
+	fmt.Println(carpeta + "\\" + filename)
 
-	archivoGuardar, _ := os.Create(fileheader.Filename) // Abrimos un nuevo archivo en la carpeta designada por el cliente
+	archivoGuardar, _ := os.OpenFile(carpeta+"\\"+filename, os.O_WRONLY|os.O_CREATE, 0666) // Abrimos un nuevo archivo en la carpeta designada por el cliente
 	defer archivoGuardar.Close()
 
-	_, err = io.Copy(archivoGuardar, file)
+	_, err := io.Copy(archivoGuardar, req.Body)
 	if err != nil { // Comprobamos si hay errores en el archivo
 		response(w, false, "El archivo no ha llegado correctamente")
 		return
@@ -284,7 +280,7 @@ func fileExists(filename string) bool {
 }
 
 func guardarUsuarios() {
-	usuarios, _ := json.Marshal(gUsers)
+	usuarios, _ := json.MarshalIndent(gUsers, "", "\n")
 	ioutil.WriteFile("usuarios.conf", usuarios, 0644)
 }
 
