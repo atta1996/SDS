@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"compress/zlib"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
@@ -15,7 +14,7 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"strconv"
+	"time"
 
 	"golang.org/x/crypto/scrypt"
 )
@@ -53,51 +52,6 @@ func response(w io.Writer, ok bool, msg string) {
 	rJSON, err := json.Marshal(&r) // codificamos en JSON
 	chk(err)                       // comprobamos error
 	w.Write(rJSON)                 // escribimos el JSON resultante
-}
-
-func responseFile(w http.ResponseWriter, file *os.File, filename string) {
-	FileHeader := make([]byte, 512)
-	file.Read(FileHeader)
-
-	FileContentType := http.DetectContentType(FileHeader)
-	FileStat, _ := file.Stat()
-	FileSize := strconv.FormatInt(FileStat.Size(), 10)
-
-	w.Header().Set("Content-Disposition", "attachment; filename="+filename)
-	w.Header().Set("Content-Type", FileContentType)
-	w.Header().Set("Content-Length", FileSize)
-
-	file.Seek(0, 0)
-	io.Copy(w, file)
-	return
-}
-
-func responseFileComprimido(w http.ResponseWriter, file *os.File, filename string) {
-	FileHeader := make([]byte, 512)
-	file.Read(FileHeader)
-
-	stream := cifradorAES256()
-	var dec cipher.StreamReader
-	dec.S = stream
-	dec.R = file
-
-	rd, err := zlib.NewReader(dec)
-	if err != nil { // Comprobamos si hay errores en el archivo
-		response(w, false, "Ha habido un error leyendo el archivo")
-		return
-	}
-
-	FileContentType := http.DetectContentType(FileHeader)
-	FileStat, _ := file.Stat()
-	FileSize := strconv.FormatInt(FileStat.Size(), 10)
-
-	w.Header().Set("Content-Disposition", "attachment; filename="+filename)
-	w.Header().Set("Content-Type", FileContentType)
-	w.Header().Set("Content-Length", FileSize)
-
-	file.Seek(0, 0)
-	io.Copy(w, rd)
-	return
 }
 
 func cifradorAES256() cipher.Stream {
@@ -177,36 +131,16 @@ func handler(w http.ResponseWriter, req *http.Request) {
 		}
 		response(w, true, u.Name)
 
-	case "enviar": // El cliente envia un archivo
-		w.Header().Set("Content-Type", "text/plain")
-		file, fileheader, err := req.FormFile("archivo") // Leemos el archivo que nos envian
-		if err != nil {                                  // Comprobamos si hay errores en el archivo
-			response(w, false, "El archivo no ha llegado correctamente")
-			return
-		}
-		defer file.Close()
-
-		archivoGuardar, _ := os.Create(fileheader.Filename) // Abrimos un nuevo archivo en la carpeta designada por el cliente
-		defer archivoGuardar.Close()
-
-		_, err = io.Copy(archivoGuardar, file)
-		if err != nil { // Comprobamos si hay errores en el archivo
-			response(w, false, "El archivo no ha llegado correctamente")
-			return
-		}
-
-		response(w, true, "El archivo ha llegado correctamente")
-
 	case "recuperar": // El cliente recupera un archivo del servidor
-		filename := "/" + req.Form.Get("user") + "/" + req.Form.Get("carpeta") + "/" + req.Form.Get("archivo")
-		archivoEnviar, err := os.Open(filename)
-		if err != nil {
-			response(w, false, "El archivo no existe o no esta en esta carpeta")
-			return
-		}
-		defer archivoEnviar.Close()
-		//responseFileComprimido(w, archivoEnviar, filename) // Descifrando y descomprimiendo
-		responseFile(w, archivoEnviar, filename)
+		filename := req.Form.Get("user") + "\\" + req.Form.Get("archivo")
+		w.Header().Set("Content-Type", "application/octet-stream")
+		w.Header().Set("Content-Disposition", "attachment; filename="+filename)
+		w.Header().Set("Content-Transfer-Encoding", "binary")
+		w.Header().Set("Expires", "0")
+		data, _ := ioutil.ReadFile(filename)
+		fmt.Println(filename)
+		http.ServeContent(w, req, filename, time.Now(), bytes.NewReader(data))
+		return
 
 	case "directorios":
 		usuario := req.Form.Get("user")
