@@ -366,6 +366,26 @@ func client() {
 
 	})
 
+	ui.Bind("recuperarArchivos", func(archivo string) {
+		fmt.Println(archivo)
+		data := url.Values{}         //Declaramos la estructura que contendrá los valores
+		data.Set("cmd", "recuperar") // comando (string)
+		data.Set("user", loggeduser) // email (string)
+		data.Set("archivo", archivo)
+
+		r, err := client.PostForm("https://localhost:10443", data)
+
+		chk(err)
+		_, err = os.Stat("descargas")
+		if os.IsNotExist(err) {
+			os.Mkdir("descargas", 0777)
+		}
+		ficheroPrueba, _ := os.OpenFile("descargas\\"+archivo, os.O_WRONLY|os.O_CREATE, 0666)
+		defer ficheroPrueba.Close()
+		_, err = io.Copy(ficheroPrueba, r.Body)
+		chk(err)
+	})
+
 	// Load HTML.
 	b, err := ioutil.ReadFile("./www/login.html") // just pass the file name
 	if err != nil {
