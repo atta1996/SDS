@@ -27,14 +27,16 @@ import (
 	"sync"
 	"time"
 
+	"github.com/robfig/cron"
+
 	"github.com/zserge/lorca"
 )
 
 type backup struct {
-	Folder       string    // nombre de usuario
-	Date         time.Time // fecha del próximo backup
-	peridiocidad string    // peridiocidad de las copias de seguridad
-	tipo         string    // tipo de backup
+	Folder       string     // nombre de usuario
+	Periodicidad string     // peridiocidad de las copias de seguridad
+	Tipo         string     // tipo de backup
+	Date         *time.Time `json:",omitempty"` // fecha del próximo backup
 }
 
 var gBackups map[string]backup
@@ -118,6 +120,9 @@ func client() {
 	}
 	client := &http.Client{Transport: tr}
 
+	gBackups = make(map[string]backup)
+	cargarBackups()
+
 	args := []string{}
 	if runtime.GOOS == "linux" {
 		args = append(args, "--class=Lorca")
@@ -160,14 +165,17 @@ func client() {
 			estructura = strings.Split(str.Msg, " ")
 			tabla := ""
 
-			var tmpl1 = `<tr><td>`
-			var tmpl2 = `</td></tr>`
-			tabla += "<table id=\"table_id\" class=\"display\">"
+			var tmpl1 = `<tr>`
+			var tmpl3 = `<td`
+			var tmpl2 = `</td>`
+			var tmpl4 = `</tr>`
 
 			for _, v := range estructura {
-				tabla += tmpl1 + v + tmpl2
+				if v != "" {
+					tabla += tmpl1 + tmpl3 + " id=\"" + v + "\"" + ">" + v + tmpl2
+					tabla += tmpl3 + ">" + "<div class=\"btn btn-primary btn-sm\" onclick=\"recuperarArchivos('" + v + "')\"><svg class=\"bi bi-cloud-download\" width=\"2em\" height=\"2em\" viewBox=\"0 0 20 20\" fill=\"currentColor\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M6.887 7.2l-.964-.165A2.5 2.5 0 105.5 12H8v1H5.5a3.5 3.5 0 11.59-6.95 5.002 5.002 0 119.804 1.98A2.501 2.501 0 0115.5 13H12v-1h3.5a1.5 1.5 0 00.237-2.981L14.7 8.854l.216-1.028a4 4 0 10-7.843-1.587l-.185.96z\"/><path fill-rule=\"evenodd\" d=\"M7 14.5a.5.5 0 01.707 0L10 16.793l2.293-2.293a.5.5 0 11.707.707l-2.646 2.647a.5.5 0 01-.708 0L7 15.207a.5.5 0 010-.707z\" clip-rule=\"evenodd\"/><path fill-rule=\"evenodd\" d=\"M10 8a.5.5 0 01.5.5v8a.5.5 0 01-1 0v-8A.5.5 0 0110 8z\" clip-rule=\"evenodd\"/></svg></div>" + tmpl2 + tmpl4
+				}
 			}
-			tabla += "</table>"
 			return tabla
 		}
 		return "ERROR"
@@ -209,6 +217,9 @@ func client() {
 
 		if str.Ok { // Si el usuario y contraseña son correctos redirigimos a index.html
 			loggeduser = str.Msg //user.String()
+			k := cron.New()
+			k.AddFunc("@every 30s", comprobarBackups)
+			k.Start()
 
 			c.Redirect("index")
 		}
@@ -276,7 +287,7 @@ func client() {
 
 		dir := filepath.Base(rutaarchivo.String())
 
-		ficherozip := loggeduser + "-" + dir + "-" + time.Now().Format("2006-1-02-15-04-05") + ".zip"
+		ficherozip := dir + "-" + time.Now().Format("2006-1-02-15-04-05") + ".zip"
 
 		outFile, err := os.Create(ficherozip)
 
@@ -329,73 +340,28 @@ func client() {
 
 	})
 
-	ui.Bind("nueva_politica", func() {
+	ui.Bind("nuevaPolitica", func() {
 
 		//Leemos el email y la contraseña del formulario de login
-		rutaarchivo := ui.Eval(`document.getElementById('filePath').value`)
-		peridiocidad := ui.Eval(`document.getElementById('peridiocidad').value`)
+		rutaarchivo := ui.Eval(`document.getElementById('rutaarchivo').value`)
+		periodicidad := ui.Eval(`document.getElementById('periodicidad').value`)
 		tipo := ui.Eval(`document.getElementById('tipo').value`)
 
 		b := backup{}
 		b.Folder = rutaarchivo.String() // nombre
-		b.peridiocidad = peridiocidad.String()
-		b.tipo = tipo.String()
-		b.Date = calcularFecha(b.peridiocidad, time.Now())
+		b.Periodicidad = periodicidad.String()
+		b.Tipo = tipo.String()
+		//b.Date = calcularFecha(b.Periodicidad)
+		b = calcularFecha(b)
 
-		gBackups[b.Folder] = b
-
-		dir := filepath.Base(rutaarchivo.String())
-
-		ficherozip := loggeduser + "-" + dir + "-" + time.Now().Format("2006-1-02-15-04-05") + ".zip"
-
-		outFile, err := os.Create(ficherozip)
-
-		if err != nil {
-			fmt.Println(err)
+		_, ok := gBackups[b.Folder]
+		if !ok {
+			gBackups[b.Folder] = b
 		}
 
-		// Create a new zip archive.
-		w := zip.NewWriter(outFile)
-		defer w.Close()
+		realizarBackup(rutaarchivo.String())
 
-		// Add some files to the archive.
-		addFiles(w, rutaarchivo.String(), "")
-
-		if err != nil {
-			fmt.Println(err)
-		}
-
-		// Make sure to check the error on Close.
-		err = w.Close()
-		if err != nil {
-			fmt.Println(err)
-		}
-
-		f, _ := os.Open(ficherozip)
-		req, err := http.NewRequest("POST", "https://localhost:10443/enviar", f)
-		req.Header.Add("usuario", loggeduser)
-		req.Header.Add("filename", ficherozip)
-		chk(err)
-
-		client := &http.Client{}
-		r, err := client.Do(req)
-		chk(err)
-
-		outFile.Close()
-		os.Remove(ficherozip)
-
-		var body []byte
-		body, err = ioutil.ReadAll(r.Body) //Leemos el contenido de la respuesta
-		defer r.Body.Close()
-
-		io.Copy(os.Stdout, r.Body) // mostramos el cuerpo de la respuesta (es un reader)
-		fmt.Println()
-		var str respserv
-		_ = json.Unmarshal(body, &str) //Asignamos el contenido de la respuesta a la variable str
-
-		if str.Ok { // Si el usuario y contraseña son correctos redirigimos a index.html
-			c.Redirect("index")
-		}
+		c.Redirect("index")
 
 	})
 
@@ -499,13 +465,100 @@ func cifradorAES256() cipher.Stream {
 	return S
 }
 
-func calcularFecha(peridiocidad string, fecha time.Time) time.Time {
+func calcularFecha(b backup) backup {
 
 	var proximaFecha time.Time
 
-	if peridiocidad == "diaria" {
+	if b.Periodicidad == "diaria" {
 		proximaFecha = time.Now().AddDate(0, 0, 1)
-		proximaFecha = time.Date(proximaFecha.Year(), proximaFecha.Month(), proximaFecha.Day(), 0, 0, 0, 0, time.UTC)
+		proximaFecha = time.Date(proximaFecha.Year(), proximaFecha.Month(), proximaFecha.Day(), 0, 0, 0, 1, time.UTC)
+		log.Println(proximaFecha)
 	}
-	return proximaFecha
+
+	b.Date = &proximaFecha
+	return b
+}
+
+func realizarBackup(rutaarchivo string) {
+
+	b, _ := gBackups[rutaarchivo]
+
+	dir := filepath.Base(rutaarchivo)
+
+	ficherozip := loggeduser + "-" + dir + "-" + time.Now().Format("2006-1-02-15-04-05") + ".zip"
+
+	outFile, err := os.Create(ficherozip)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	// Create a new zip archive.
+	w := zip.NewWriter(outFile)
+	defer w.Close()
+
+	// Add some files to the archive.
+	addFiles(w, rutaarchivo, "")
+
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	// Make sure to check the error on Close.
+	err = w.Close()
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	f, _ := os.Open(ficherozip)
+	req, err := http.NewRequest("POST", "https://localhost:10443/enviar", f)
+	req.Header.Add("usuario", loggeduser)
+	req.Header.Add("filename", ficherozip)
+	chk(err)
+
+	client := &http.Client{}
+	r, err := client.Do(req)
+	chk(err)
+
+	outFile.Close()
+	os.Remove(ficherozip)
+
+	var body []byte
+	body, err = ioutil.ReadAll(r.Body) //Leemos el contenido de la respuesta
+	defer r.Body.Close()
+
+	io.Copy(os.Stdout, r.Body) // mostramos el cuerpo de la respuesta (es un reader)
+	fmt.Println()
+	var str respserv
+	_ = json.Unmarshal(body, &str) //Asignamos el contenido de la respuesta a la variable str
+
+	/*if str.Ok { // Si el usuario y contraseña son correctos redirigimos a index.html
+		c.Redirect("index")
+	}*/
+
+	b = calcularFecha(b)
+	gBackups[rutaarchivo] = b
+
+	guardarBackups()
+}
+
+func comprobarBackups() {
+	for {
+		for _, element := range gBackups {
+			if !element.Date.After(time.Now()) {
+				realizarBackup(element.Folder)
+			}
+		}
+	}
+}
+
+func guardarBackups() {
+	backups, _ := json.MarshalIndent(gBackups, "", "\n")
+	ioutil.WriteFile("config.json", backups, 0644)
+}
+
+func cargarBackups() {
+	backups, _ := ioutil.ReadFile("config.json")
+
+	json.Unmarshal(backups, &gBackups)
 }
