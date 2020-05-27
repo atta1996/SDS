@@ -216,10 +216,19 @@ func handler(w http.ResponseWriter, req *http.Request) {
 			response(w, false, "El usuario no tiene ningun directorio")
 		}
 		for _, f := range files {
-			estructura += f.Name()
+			estructura += f.Name() + " "
 		}
 		response(w, true, estructura)
 
+	case "eliminar":
+		usuario := req.Form.Get("user")
+		archivo := req.Form.Get("filename")
+		err := os.Remove(usuario + "\\" + archivo)
+		if err != nil {
+			response(w, false, "No se ha podido eliminar el archivo")
+			return
+		}
+		response(w, true, "El archivo se ha eliminado correctamente")
 	default:
 		response(w, false, "Comando inválido")
 	}
