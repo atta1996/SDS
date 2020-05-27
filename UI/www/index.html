@@ -1,9 +1,14 @@
 <!doctype html>
 <html>
 	<head>
+		<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
 		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
 		<title>Counter</title>
 		<link rel="shortcut icon" href="favicon.png">
+		<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.20/css/jquery.dataTables.css">
+  
+		<script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.10.20/js/jquery.dataTables.js"></script>
+		
 		<style>
 		/** { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
 		body { height: 100vh; display: flex; align-items: center; justify-content: center; background-color: #fff; font-family: 'Helvetika Neue', Arial, sans-serif; font-size: 12px; }
@@ -14,32 +19,60 @@
 		.btn:hover { box-shadow: 0 4px #8b5e00; top: 2px; }
 		.btn:active{ box-shadow: 0 1px #8b5e00; top: 5px; }*/
 		</style>
+		<script>
+			$(document).ready( function () {
+				$('#table_id').DataTable();
+			} );
+		</script>
 	</head>
 	<body onload=start()>
 		<!-- UI layout -->
 		<div class="counter-container">
 			<div>
-				<a>Nombre usuario</a>
-				<div style="text-align: right;">
-					<div class="btn btn-primary">Subir</div>
-					<div class="btn btn-outline-secondary">
-						<svg class="bi bi-gear" width="1em" height="1em" viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-							<path fill-rule="evenodd" d="M10.837 3.626c-.246-.835-1.428-.835-1.674 0l-.094.319A1.873 1.873 0 016.377 5.06l-.292-.16c-.764-.415-1.6.42-1.184 1.185l.159.292a1.873 1.873 0 01-1.115 2.692l-.319.094c-.835.246-.835 1.428 0 1.674l.319.094a1.873 1.873 0 011.115 2.693l-.16.291c-.415.764.42 1.6 1.185 1.184l.292-.159a1.873 1.873 0 012.692 1.115l.094.319c.246.835 1.428.835 1.674 0l.094-.319a1.873 1.873 0 012.693-1.115l.291.16c.764.415 1.6-.42 1.184-1.185l-.159-.291a1.873 1.873 0 011.115-2.693l.319-.094c.835-.246.835-1.428 0-1.674l-.319-.094a1.873 1.873 0 01-1.115-2.692l.16-.292c.415-.764-.42-1.6-1.185-1.184l-.291.159a1.873 1.873 0 01-2.693-1.115l-.094-.319zm-2.633-.283c.527-1.79 3.064-1.79 3.592 0l.094.319a.873.873 0 001.255.52l.292-.16c1.64-.892 3.434.901 2.54 2.541l-.159.292a.873.873 0 00.52 1.255l.319.094c1.79.527 1.79 3.064 0 3.592l-.319.094a.873.873 0 00-.52 1.255l.16.292c.893 1.64-.902 3.434-2.541 2.54l-.292-.159a.873.873 0 00-1.255.52l-.094.319c-.527 1.79-3.065 1.79-3.592 0l-.094-.319a.873.873 0 00-1.255-.52l-.292.16c-1.64.893-3.433-.902-2.54-2.541l.159-.292a.873.873 0 00-.52-1.255l-.319-.094c-1.79-.527-1.79-3.065 0-3.592l.319-.094a.873.873 0 00.52-1.255l-.16-.292c-.892-1.64.901-3.433 2.541-2.54l.292.159a.873.873 0 001.255-.52l.094-.319z" clip-rule="evenodd"/>
-							<path fill-rule="evenodd" d="M10 7.754a2.246 2.246 0 100 4.492 2.246 2.246 0 000-4.492zM6.754 10a3.246 3.246 0 116.492 0 3.246 3.246 0 01-6.492 0z" clip-rule="evenodd"/>
-						  </svg>
+				
+				<div class="d-flex" style="margin-top: 3px; margin-bottom: 15px"> <!--style="text-align: right;">-->
+					<div>
+						<a href="#" class="stretched-link" style="text-decoration:none;">Nombre usuario</a>
+					</div>
+					<div class="ml-auto">
+						<div class="btn btn-primary">Subir</div>
+						<div class="btn btn-outline-secondary">
+							<svg class="bi bi-gear" width="1em" height="1em" viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+								<path fill-rule="evenodd" d="M10.837 3.626c-.246-.835-1.428-.835-1.674 0l-.094.319A1.873 1.873 0 016.377 5.06l-.292-.16c-.764-.415-1.6.42-1.184 1.185l.159.292a1.873 1.873 0 01-1.115 2.692l-.319.094c-.835.246-.835 1.428 0 1.674l.319.094a1.873 1.873 0 011.115 2.693l-.16.291c-.415.764.42 1.6 1.185 1.184l.292-.159a1.873 1.873 0 012.692 1.115l.094.319c.246.835 1.428.835 1.674 0l.094-.319a1.873 1.873 0 012.693-1.115l.291.16c.764.415 1.6-.42 1.184-1.185l-.159-.291a1.873 1.873 0 011.115-2.693l.319-.094c.835-.246.835-1.428 0-1.674l-.319-.094a1.873 1.873 0 01-1.115-2.692l.16-.292c.415-.764-.42-1.6-1.185-1.184l-.291.159a1.873 1.873 0 01-2.693-1.115l-.094-.319zm-2.633-.283c.527-1.79 3.064-1.79 3.592 0l.094.319a.873.873 0 001.255.52l.292-.16c1.64-.892 3.434.901 2.54 2.541l-.159.292a.873.873 0 00.52 1.255l.319.094c1.79.527 1.79 3.064 0 3.592l-.319.094a.873.873 0 00-.52 1.255l.16.292c.893 1.64-.902 3.434-2.541 2.54l-.292-.159a.873.873 0 00-1.255.52l-.094.319c-.527 1.79-3.065 1.79-3.592 0l-.094-.319a.873.873 0 00-1.255-.52l-.292.16c-1.64.893-3.433-.902-2.54-2.541l.159-.292a.873.873 0 00-.52-1.255l-.319-.094c-1.79-.527-1.79-3.065 0-3.592l.319-.094a.873.873 0 00.52-1.255l-.16-.292c-.892-1.64.901-3.433 2.541-2.54l.292.159a.873.873 0 001.255-.52l.094-.319z" clip-rule="evenodd"/>
+								<path fill-rule="evenodd" d="M10 7.754a2.246 2.246 0 100 4.492 2.246 2.246 0 000-4.492zM6.754 10a3.246 3.246 0 116.492 0 3.246 3.246 0 01-6.492 0z" clip-rule="evenodd"/>
+							</svg>
+						</div>
+						<div class="clearfix"></div>
 					</div>
 						
-					
 				</div>
 			</div>
-			<p></p>
+			
 			<div class="btn-row" style="border: black; border-style:solid;">
-				<div>
+				<!--<div>
 					<p>-<img src="..\icons-1.0.0-alpha2\icons\folder.svg" alt="" width="20" height="20" title="Bootstrap"> Carpeta 1
 						<p>- Carpeta 2</p>
 					</p>
 					<p>- Carpeta 3</p>
-				</div>
+				</div>-->
+				<table id="table_id" class="display">
+					<thead>
+						<tr>
+							<th>Column 1</th>
+							<th>Column 2</th>
+						</tr>
+					</thead>
+					<tbody>
+						<tr>
+							<td>Row 1 Data 1</td>
+							<td>Row 1 Data 2</td>
+						</tr>
+						<tr>
+							<td>Row 2 Data 1</td>
+							<td>Row 2 Data 2</td>
+						</tr>
+					</tbody>
+				</table>
 			</div>
 			<p></p>
 			<div>
@@ -73,21 +106,8 @@
 			const btnDecr = document.querySelector('.btn-decr');
 
 			// We use async/await because Go functions are asynchronous
-			const render = async () => {
-				counter.innerText = `Count: ${await window.counterValue()}`;
-			};
-
-			btnIncr.addEventListener('click', async () => {
-				await counterAdd(1); // Call Go function
-				render();
-			});
-
-			btnDecr.addEventListener('click', async () => {
-				await counterAdd(-1); // Call Go function
-				render();
-			});
-
-			render();
+			
+			
 		</script>
 	</body>
 </html>

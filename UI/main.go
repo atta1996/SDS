@@ -22,18 +22,21 @@ import (
 type counter struct {
 	sync.Mutex
 	count int
+	ui    lorca.UI
 }
 
-func (c *counter) Add(n int) {
-	c.Lock()
-	defer c.Unlock()
-	c.count = c.count + n
-}
+func (c *counter) Redirect(archivo string) {
 
-func (c *counter) Value() int {
 	c.Lock()
 	defer c.Unlock()
-	return c.count
+
+	// Load HTML.
+	b, err := ioutil.ReadFile("./www/" + archivo + ".html") // just pass the file name
+	if err != nil {
+		fmt.Print(err)
+	}
+	html := string(b) // convert content to a 'string'
+	c.ui.Load("data:text/html," + url.PathEscape(html))
 }
 
 func main() {
@@ -41,7 +44,7 @@ func main() {
 	if runtime.GOOS == "linux" {
 		args = append(args, "--class=Lorca")
 	}
-	ui, err := lorca.New("", "", 480, 320, args...)
+	ui, err := lorca.New("", "", 550, 605, args...)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -54,11 +57,12 @@ func main() {
 
 	// Create and bind Go object to the UI
 	c := &counter{}
-	ui.Bind("counterAdd", c.Add)
-	ui.Bind("counterValue", c.Value)
+	c.ui = ui
+
+	c.ui.Bind("redirect", c.Redirect)
 
 	// Load HTML.
-	b, err := ioutil.ReadFile("./www/index.html") // just pass the file name
+	b, err := ioutil.ReadFile("./www/login.html") // just pass the file name
 	if err != nil {
 		fmt.Print(err)
 	}
