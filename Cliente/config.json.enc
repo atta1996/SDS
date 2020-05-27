@@ -1,0 +1,50 @@
+{
+
+"M:\\Usuarios\\Alx\\Desktop\\test\\": {
+
+
+"Folder": "M:\\Usuarios\\Alx\\Desktop\\test\\",
+
+
+"Periodicidad": "diaria",
+
+
+"Tipo": "completa",
+
+
+"Date": "2020-05-28T00:00:00.000000001Z"
+
+},
+
+"M:\\Usuarios\\Alx\\Desktop\\test\\otra\\": {
+
+
+"Folder": "M:\\Usuarios\\Alx\\Desktop\\test\\otra\\",
+
+
+"Periodicidad": "diaria",
+
+
+"Tipo": "completa",
+
+
+"Date": "2020-05-28T00:00:00.000000001Z"
+
+},
+
+"M:\\Usuarios\\Alx\\Documentos\\GitHub\\SDS\\Cliente\\www\\": {
+
+
+"Folder": "M:\\Usuarios\\Alx\\Documentos\\GitHub\\SDS\\Cliente\\www\\",
+
+
+"Periodicidad": "diaria",
+
+
+"Tipo": "completa",
+
+
+"Date": "2020-05-28T00:00:00.000000001Z"
+
+}
+}

@@ -313,6 +313,7 @@ func client() {
 		}
 
 		f, _ := os.Open(ficherozip)
+
 		req, err := http.NewRequest("POST", "https://localhost:10443/enviar", f)
 		req.Header.Add("usuario", loggeduser)
 		req.Header.Add("filename", ficherozip)
@@ -543,22 +544,21 @@ func realizarBackup(rutaarchivo string) {
 }
 
 func comprobarBackups() {
-	for {
-		for _, element := range gBackups {
-			if !element.Date.After(time.Now()) {
-				realizarBackup(element.Folder)
-			}
+
+	for _, element := range gBackups {
+		if !element.Date.After(time.Now()) {
+			realizarBackup(element.Folder)
 		}
 	}
 }
 
 func guardarBackups() {
 	backups, _ := json.MarshalIndent(gBackups, "", "\n")
-	ioutil.WriteFile("config.json", backups, 0644)
+	ioutil.WriteFile("config.json.enc", backups, 0644)
 }
 
 func cargarBackups() {
-	backups, _ := ioutil.ReadFile("config.json")
+	backups, _ := ioutil.ReadFile("config.json.enc")
 
 	json.Unmarshal(backups, &gBackups)
 }
