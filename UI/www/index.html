@@ -109,12 +109,8 @@
 					</p>
 					<p>- Carpeta 3</p>
 				</div>-->
-				<script>
-					var table = $("#table tbody");
-					$.each(data, function(idx, elem){
-						table.append("<tr><td>"+elem.username+"</td><td>"+elem.name+"</td>   <td>"+elem.lastname+"</td></tr>");
-					});
-				</script>
+
+				<div id="container"></div>
 				
 				<table id="table_id" class="display">
 					<thead>
@@ -166,12 +162,13 @@
 
 
 			const username = document.getElementById('index_username');
+			const tabla = document.getElementById('container');
 			
 
 			// We use async/await because Go functions are asynchronous
 			const render = async () => {
+				tabla.innerHTML = `${await window.getArchivos()}`;
 				username.innerText = `${await window.getUsername()}`;
-
 			};
 			render();
 

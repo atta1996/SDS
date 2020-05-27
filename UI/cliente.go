@@ -23,17 +23,21 @@ import (
 	"os/signal"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/zserge/lorca"
 )
 
-// User holds a users account information
-/*type Loggeduser struct {
-	username string
-	logged bool
-}*/
+type backup struct {
+	Folder       string    // nombre de usuario
+	Date         time.Time // fecha del próximo backup
+	peridiocidad string    // peridiocidad de las copias de seguridad
+	tipo         string    // tipo de backup
+}
+
+var gBackups map[string]backup
 
 var loggeduser string
 
@@ -136,6 +140,38 @@ func client() {
 	ui.Bind("redirect", c.Redirect)
 
 	ui.Bind("getUsername", getLoggedUser)
+
+	ui.Bind("getArchivos", func() string {
+		data := url.Values{}
+		data.Set("cmd", "directorios")
+		data.Set("user", getLoggedUser())
+		r, err := client.PostForm("https://localhost:10443", data) //enviamos la estructura mediante un POST
+		chk(err)
+
+		var estructura []string
+
+		var body []byte
+		body, err = ioutil.ReadAll(r.Body) //Leemos el contenido de la respuesta
+		defer r.Body.Close()
+		var str respserv
+		_ = json.Unmarshal(body, &str)
+		if str.Ok {
+
+			estructura = strings.Split(str.Msg, " ")
+			tabla := ""
+
+			var tmpl1 = `<tr><td>`
+			var tmpl2 = `</td></tr>`
+			tabla += "<table id=\"table_id\" class=\"display\">"
+
+			for _, v := range estructura {
+				tabla += tmpl1 + v + tmpl2
+			}
+			tabla += "</table>"
+			return tabla
+		}
+		return "ERROR"
+	})
 
 	//Enlazamos la función login a la UI
 	ui.Bind("login", func() {
@@ -293,6 +329,76 @@ func client() {
 
 	})
 
+	ui.Bind("nueva_politica", func() {
+
+		//Leemos el email y la contraseña del formulario de login
+		rutaarchivo := ui.Eval(`document.getElementById('filePath').value`)
+		peridiocidad := ui.Eval(`document.getElementById('peridiocidad').value`)
+		tipo := ui.Eval(`document.getElementById('tipo').value`)
+
+		b := backup{}
+		b.Folder = rutaarchivo.String() // nombre
+		b.peridiocidad = peridiocidad.String()
+		b.tipo = tipo.String()
+		b.Date = calcularFecha(b.peridiocidad, time.Now())
+
+		gBackups[b.Folder] = b
+
+		dir := filepath.Base(rutaarchivo.String())
+
+		ficherozip := loggeduser + "-" + dir + "-" + time.Now().Format("2006-1-02-15-04-05") + ".zip"
+
+		outFile, err := os.Create(ficherozip)
+
+		if err != nil {
+			fmt.Println(err)
+		}
+
+		// Create a new zip archive.
+		w := zip.NewWriter(outFile)
+		defer w.Close()
+
+		// Add some files to the archive.
+		addFiles(w, rutaarchivo.String(), "")
+
+		if err != nil {
+			fmt.Println(err)
+		}
+
+		// Make sure to check the error on Close.
+		err = w.Close()
+		if err != nil {
+			fmt.Println(err)
+		}
+
+		f, _ := os.Open(ficherozip)
+		req, err := http.NewRequest("POST", "https://localhost:10443/enviar", f)
+		req.Header.Add("usuario", loggeduser)
+		req.Header.Add("filename", ficherozip)
+		chk(err)
+
+		client := &http.Client{}
+		r, err := client.Do(req)
+		chk(err)
+
+		outFile.Close()
+		os.Remove(ficherozip)
+
+		var body []byte
+		body, err = ioutil.ReadAll(r.Body) //Leemos el contenido de la respuesta
+		defer r.Body.Close()
+
+		io.Copy(os.Stdout, r.Body) // mostramos el cuerpo de la respuesta (es un reader)
+		fmt.Println()
+		var str respserv
+		_ = json.Unmarshal(body, &str) //Asignamos el contenido de la respuesta a la variable str
+
+		if str.Ok { // Si el usuario y contraseña son correctos redirigimos a index.html
+			c.Redirect("index")
+		}
+
+	})
+
 	// Load HTML.
 	b, err := ioutil.ReadFile("./www/login.html") // just pass the file name
 	if err != nil {
@@ -391,4 +497,15 @@ func cifradorAES256() cipher.Stream {
 	S := cipher.NewCTR(block, iv[:16])
 
 	return S
+}
+
+func calcularFecha(peridiocidad string, fecha time.Time) time.Time {
+
+	var proximaFecha time.Time
+
+	if peridiocidad == "diaria" {
+		proximaFecha = time.Now().AddDate(0, 0, 1)
+		proximaFecha = time.Date(proximaFecha.Year(), proximaFecha.Month(), proximaFecha.Day(), 0, 0, 0, 0, time.UTC)
+	}
+	return proximaFecha
 }
