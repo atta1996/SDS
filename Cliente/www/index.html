@@ -3,22 +3,50 @@
 	<head>
 		<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
 		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
-		<title>Counter</title>
+		<title>FakeDrive</title>
 		<link rel="shortcut icon" href="favicon.png">
 		<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.20/css/jquery.dataTables.css">
   
 		<script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.10.20/js/jquery.dataTables.js"></script>
 		
 		<style>
-		/** { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
-		body { height: 100vh; display: flex; align-items: center; justify-content: center; background-color: #fff; font-family: 'Helvetika Neue', Arial, sans-serif; font-size: 12px; }
-		.counter-container { display: flex; flex-direction: column; align-items: center; }
-		.counter { text-transform: uppercase; color: rgb(0, 0, 0); font-weight: bold; font-size: 14; }
-		.btn-row { display: flex; align-items: center; margin: 1rem; }
-		.btn { cursor: pointer; min-width: 4em; padding: 1em; border-radius: 5px; text-align: center; margin: 0 1rem; box-shadow: 0 6px #8b5e00; color: white; background-color: #E4B702; position: relative; font-weight: bold; }
-		.btn:hover { box-shadow: 0 4px #8b5e00; top: 2px; }
-		.btn:active{ box-shadow: 0 1px #8b5e00; top: 5px; }*/
+			/* Modal Header */
+			.modal-header {
+				padding: 2px 16px;
+				background-color: #008cff;
+				color: white;
+			}
+
+			/* Modal Body */
+			.modal-body {padding: 6px 16px;}
+
+			/* Modal Footer */
+			.modal-footer {
+				padding: 2px 16px;
+				background-color: #008cff;
+				color: white;
+			}
+
+			/* Modal Content */
+			.modal-content {
+				position: relative;
+				background-color: #fefefe;
+				margin: auto;
+				padding: 0;
+				border: 1px solid #888;
+				width: 80%;
+				box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2),0 6px 20px 0 rgba(0,0,0,0.19);
+				animation-name: animatetop;
+				animation-duration: 0.4s
+			}
+
+			/* Add Animation */
+			@keyframes animatetop {
+				from {top: -300px; opacity: 0}
+				to {top: 0; opacity: 1}
+			}
 		</style>
+
 		<script>
 			$(document).ready( function () {
 				$('#table_id').DataTable();
@@ -27,15 +55,84 @@
 	</head>
 	<body onload=start()>
 		<!-- UI layout -->
-		<div class="counter-container">
+		<div class="counter-container" style="margin-left: 15px; margin-right: 15px">
 			<div>
 				
 				<div class="d-flex" style="margin-top: 3px; margin-bottom: 15px"> <!--style="text-align: right;">-->
 					<div>
-						<a href="#" class="stretched-link" style="text-decoration:none;">Nombre usuario</a>
+						<a id="index_username" href="#" class="stretched-link" style="text-decoration:none;"></a>
 					</div>
 					<div class="ml-auto">
-						<div class="btn btn-primary">Subir</div>
+						<div class="btn btn-primary" id="BtnSubir">Subir</div>
+
+						<!-- The Modal -->
+						<div id="UploadModal" class="modal">
+							<!-- Modal content -->
+							<div class="modal-content">
+								<div class="modal-header">
+								  <!--<span class="close">&times;</span>-->
+								  <h2>Subir archivo</h2>
+								</div>
+								<div class="modal-body">
+									<form enctype="multipart/form-data" id="multipart" method="post"></form> 
+										<input type="text" name="filePath" id="filePath" placeholder="Ruta al archivo"/>
+										<input type="hidden" id="user" value="Error"/>
+										<input type="submit" value="enviar" onclick="enviar()"/>
+									</form>
+								</div>
+								<div class="modal-footer">
+								  <h3></h3>
+								</div>
+							  </div>
+							<div class="modal-content">
+								<span class="close">&times;</span>
+								
+							</div>
+						</div>
+
+						<div class="btn btn-primary" id="BtnPolitica">Nueva politica</div>
+
+						<!-- The Modal -->
+						<div id="PolicyModal" class="modal">
+							<!-- Modal content -->
+							<div class="modal-content">
+								<div class="modal-header">
+								  <!--<span class="close">&times;</span>-->
+								  <h2>Nueva politica</h2>
+								</div>
+								<div class="modal-body">
+									<form enctype="multipart/form-data" id="multipart" method="post"></form> 
+										<div>
+											<input type="text" name="rutaarchivo" id="rutaarchivo" placeholder="Ruta al archivo"/>
+										</div>
+										<div>
+											<label for="periodicidadSelect">Periodicidad:</label>
+											<select id="periodicidadSelect">
+												<option value="diaria">Diaria</option>
+											</select>
+											<input type="hidden" id="periodicidad" value="diaria">
+										</div>
+										<div>
+										  <label for="tipoSelect">Tipo de copia:</label>
+											<select id="tipoSelect">
+												<option value="completa">Completa</option>
+											</select>
+											<input type="hidden" id="tipo" value="completa">
+										</div>
+										<input type="submit" value="Guardar politica" onclick="nuevaPolitica()"/>
+									</form>
+								</div>
+								<div class="modal-footer">
+								  <h3></h3>
+								</div>
+							  </div>
+							<div class="modal-content">
+								<span class="close">&times;</span>
+								
+							</div>
+						</div>
+
+
 						<div class="btn btn-outline-secondary">
 							<svg class="bi bi-gear" width="1em" height="1em" viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
 								<path fill-rule="evenodd" d="M10.837 3.626c-.246-.835-1.428-.835-1.674 0l-.094.319A1.873 1.873 0 016.377 5.06l-.292-.16c-.764-.415-1.6.42-1.184 1.185l.159.292a1.873 1.873 0 01-1.115 2.692l-.319.094c-.835.246-.835 1.428 0 1.674l.319.094a1.873 1.873 0 011.115 2.693l-.16.291c-.415.764.42 1.6 1.185 1.184l.292-.159a1.873 1.873 0 012.692 1.115l.094.319c.246.835 1.428.835 1.674 0l.094-.319a1.873 1.873 0 012.693-1.115l.291.16c.764.415 1.6-.42 1.184-1.185l-.159-.291a1.873 1.873 0 011.115-2.693l.319-.094c.835-.246.835-1.428 0-1.674l-.319-.094a1.873 1.873 0 01-1.115-2.692l.16-.292c.415-.764-.42-1.6-1.185-1.184l-.291.159a1.873 1.873 0 01-2.693-1.115l-.094-.319zm-2.633-.283c.527-1.79 3.064-1.79 3.592 0l.094.319a.873.873 0 001.255.52l.292-.16c1.64-.892 3.434.901 2.54 2.541l-.159.292a.873.873 0 00.52 1.255l.319.094c1.79.527 1.79 3.064 0 3.592l-.319.094a.873.873 0 00-.52 1.255l.16.292c.893 1.64-.902 3.434-2.541 2.54l-.292-.159a.873.873 0 00-1.255.52l-.094.319c-.527 1.79-3.065 1.79-3.592 0l-.094-.319a.873.873 0 00-1.255-.52l-.292.16c-1.64.893-3.433-.902-2.54-2.541l.159-.292a.873.873 0 00-.52-1.255l-.319-.094c-1.79-.527-1.79-3.065 0-3.592l.319-.094a.873.873 0 00.52-1.255l-.16-.292c-.892-1.64.901-3.433 2.541-2.54l.292.159a.873.873 0 001.255-.52l.094-.319z" clip-rule="evenodd"/>
@@ -55,6 +152,9 @@
 					</p>
 					<p>- Carpeta 3</p>
 				</div>-->
+
+				<div id="container"></div>
+				
 				<table id="table_id" class="display">
 					<thead>
 						<tr>
@@ -62,15 +162,7 @@
 							<th>Column 2</th>
 						</tr>
 					</thead>
-					<tbody>
-						<tr>
-							<td>Row 1 Data 1</td>
-							<td>Row 1 Data 2</td>
-						</tr>
-						<tr>
-							<td>Row 2 Data 1</td>
-							<td>Row 2 Data 2</td>
-						</tr>
+					<tbody id="table_body">
 					</tbody>
 				</table>
 			</div>
@@ -101,13 +193,56 @@
 
 		<!-- Connect UI actions to Go functions -->
 		<script>
-			const counter = document.querySelector('.counter');
-			const btnIncr = document.querySelector('.btn-incr');
-			const btnDecr = document.querySelector('.btn-decr');
+			//document.getElementById("user").value = `${await window.getUsername()}`;
+
+
+			const username = document.getElementById('index_username');
+			const tabla = document.getElementById('table_body');
+			
 
 			// We use async/await because Go functions are asynchronous
-			
-			
+			const render = async () => {
+				tabla.innerHTML = `${await window.getArchivos()}`;
+				username.innerText = `${await window.getUsername()}`;
+			};
+			render();
+
+
+
+			// Get the modal
+			var modal = document.getElementById("UploadModal");
+			var policyModal = document.getElementById("PolicyModal");
+
+			// Get the button that opens the modal
+			var btn = document.getElementById("BtnSubir");
+			var btn2 = document.getElementById("BtnPolitica");
+
+			// Get the <span> element that closes the modal
+			var span = document.getElementsByClassName("close")[0];
+
+			// When the user clicks on the button, open the modal
+			btn.onclick = function() {
+				modal.style.display = "block";
+			}
+
+			btn2.onclick = function() {
+				policyModal.style.display = "block";
+			}
+
+			// When the user clicks on <span> (x), close the modal
+			span.onclick = function() {
+				
+			}
+
+			// When the user clicks anywhere outside of the modal, close it
+			window.onclick = function(event) {
+				if (event.target == modal) {
+					modal.style.display = "none";
+				}
+				if (event.target == policyModal) {
+					policyModal.style.display = "none";
+				}
+			}
 		</script>
 	</body>
 </html>
