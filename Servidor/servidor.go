@@ -14,6 +14,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	"golang.org/x/crypto/scrypt"
@@ -41,6 +42,7 @@ type user struct {
 	Salt  []byte            // sal para la contraseña
 	Data  map[string]string // datos adicionales del usuario
 	Email string            //email del usuario
+	Id    int
 }
 
 var gUsers map[string]user
@@ -88,6 +90,7 @@ func handler(w http.ResponseWriter, req *http.Request) {
 		u.Data["public"] = req.Form.Get("pubkey")  // clave pública
 		password := decode64(req.Form.Get("pass")) // contraseña (keyLogin)
 		u.Email = req.Form.Get("email")
+		u.Id = sigUsuario()
 
 		// "hasheamos" la contraseña con scrypt
 		u.Hash, _ = scrypt.Key(password, u.Salt, 16384, 8, 1, 32)
@@ -105,7 +108,7 @@ func handler(w http.ResponseWriter, req *http.Request) {
 			gUsers[u.Name] = u
 			response(w, true, "Usuario registrado")
 			guardarUsuarios()
-			os.Mkdir(u.Name, 0777)
+			os.Mkdir(strconv.Itoa(u.Id), 0777)
 		}
 
 	case "login": // ** login
@@ -132,7 +135,7 @@ func handler(w http.ResponseWriter, req *http.Request) {
 		response(w, true, u.Name)
 
 	case "recuperar": // El cliente recupera un archivo del servidor
-		filename := req.Form.Get("user") + "\\" + req.Form.Get("archivo")
+		filename := strconv.Itoa(buscarId(req.Form.Get("user"))) + "\\" + req.Form.Get("archivo")
 		w.Header().Set("Content-Type", "application/octet-stream")
 		w.Header().Set("Content-Disposition", "attachment; filename="+filename)
 		w.Header().Set("Content-Transfer-Encoding", "binary")
@@ -143,7 +146,7 @@ func handler(w http.ResponseWriter, req *http.Request) {
 		return
 
 	case "directorios":
-		usuario := req.Form.Get("user")
+		usuario := strconv.Itoa(buscarId(req.Form.Get("user")))
 		estructura := ""
 		files, err := ioutil.ReadDir(usuario)
 		if err != nil {
@@ -155,7 +158,7 @@ func handler(w http.ResponseWriter, req *http.Request) {
 		response(w, true, estructura)
 
 	case "eliminar":
-		usuario := req.Form.Get("user")
+		usuario := strconv.Itoa(buscarId(req.Form.Get("user")))
 		archivo := req.Form.Get("filename")
 		err := os.Remove(usuario + "\\" + archivo)
 		if err != nil {
@@ -173,7 +176,7 @@ func handleEnviar(w http.ResponseWriter, req *http.Request) {
 	req.ParseForm()
 	req.ParseMultipartForm(10 << 21)
 	w.Header().Set("Content-Type", "text/plain")
-	carpeta := req.Header.Get("usuario")
+	carpeta := strconv.Itoa(buscarId(req.Header.Get("usuario")))
 	filename := req.Header.Get("filename")
 	fmt.Println(carpeta + "\\" + filename)
 
@@ -231,4 +234,23 @@ func cargarUsuarios() {
 	usuarios, _ := ioutil.ReadFile("usuarios.conf")
 
 	json.Unmarshal(usuarios, &gUsers)
+}
+
+func sigUsuario() int {
+	max := 0
+	for _, numMax := range gUsers {
+		if max < numMax.Id {
+			max = numMax.Id
+		}
+	}
+	return max + 1
+}
+
+func buscarId(usuario string) int {
+	for _, buscaUsuario := range gUsers {
+		if usuario == buscaUsuario.Name {
+			return buscaUsuario.Id
+		}
+	}
+	return -1
 }
